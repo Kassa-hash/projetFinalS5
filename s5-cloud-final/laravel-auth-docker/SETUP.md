@@ -148,3 +148,15 @@ Questions / suggestions
 - Souhaitez-vous que je génère un token uniforme (Laravel Sanctum/JWT) pour les utilisateurs créés localement afin d'homogénéiser les réponses entre `firebase` et `postgres` ?
 
 ---
+
+
+curl -X POST "http://localhost:8000/api/firebase/register" ^
+ -H "Content-Type: application/json" ^
+ -H "Accept: application/json" ^
+ -d "{\"name\":\"Test\",\"email\":\"tsila@mail.com\",\"password\":\"passe123\"}"
+
+
+curl -X POST "http://localhost:8000/api/firebase/login" ^
+ -H "Content-Type: application/json" ^
+ -H "Accept: application/json" ^
+ -d "{\"email\":\"tsila@mail.com\",\"password\":\"passe123\"}"
