@@ -1,0 +1,1 @@
+tippecanoe -o antananarivo.mbtiles -zg --drop-densest-as-needed madagascar-260119.osm.pbf
