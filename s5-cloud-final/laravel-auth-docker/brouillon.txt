@@ -1,0 +1,8 @@
+CREATE USER laraveluser WITH PASSWORD 'secret';
+
+
+docker-compose exec app php artisan vendor:publish --provider="Kreait\Laravel\Firebase\ServiceProvider" --tag=config
+
+
+Invoke-RestMethod -Uri 'http://localhost:8000/api/firebase/register' -Method Post -Body (@{name='Test'; email='ton@mail.com'; password='motdepasse'} | ConvertTo-Json) -ContentType 'application/json'
+
