@@ -18,11 +18,13 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'firebase_uid',
         'name',
         'email',
         'password',
-        'login_attempts',
-        'locked_until',
+        'phone',
+        'role',
+        'account_lockout',
     ];
 
     /**
@@ -45,7 +47,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'locked_until' => 'datetime',
+            'account_lockout' => 'boolean',
         ];
     }
 
