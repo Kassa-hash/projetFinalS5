@@ -54,7 +54,7 @@ npm install
 npm run build    # ou `npm run dev` pour watch
 ```
 
-- Dans un conteneur Node (déjà défini dans `docker-compose.yml`):
+- nDans u conteneur Node (déjà défini dans `docker-compose.yml`):
 
 ```bash
 # une exécution ponctuelle pour installer et builder
