@@ -61,15 +61,6 @@
           />
         </div>
 
-        <div class="form-group">
-          <label for="role">Type de compte</label>
-          <select v-model="formData.role" id="role" required>
-            <option value="">Sélectionnez un rôle</option>
-            <option value="user">Utilisateur</option>
-            <option value="manager">Manager</option>
-          </select>
-        </div>
-
         <button type="submit" :disabled="authStore.loading" class="btn-submit">
           {{ authStore.loading ? 'Inscription en cours...' : 'S\'inscrire' }}
         </button>
@@ -100,7 +91,7 @@ const formData = reactive({
   phone: '',
   password: '',
   password_confirmation: '',
-  role: ''
+  role: 'user'
 })
 
 const handleRegister = async () => {
