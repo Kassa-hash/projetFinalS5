@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import type { RouteRecordRaw } from 'vue-router'
+import MapView from '@/views/MapView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -40,8 +41,14 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
+   history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'map',
+      component: MapView,
+    },
+  ],
 })
 
 router.beforeEach(async (to, from, next) => {
