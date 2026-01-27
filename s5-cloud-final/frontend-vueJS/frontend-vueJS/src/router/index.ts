@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import type { RouteRecordRaw } from 'vue-router'
+import MapView from '@/views/MapView.vue'
 
-const routes: RouteRecordRaw[] = [
+const routes = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/views/HomeView.vue')
+    component: MapView
   },
   {
     path: '/login',
@@ -22,13 +22,11 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/dashboard/user',
-    name: 'dashboard-user',
     component: () => import('@/views/DashboardUserView.vue'),
     meta: { requiresAuth: true, requiredRole: 'user' }
   },
   {
     path: '/dashboard/manager',
-    name: 'dashboard-manager',
     component: () => import('@/views/DashboardManagerView.vue'),
     meta: { requiresAuth: true, requiredRole: 'manager' }
   },
@@ -40,13 +38,12 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/unauthorized',
-    name: 'unauthorized',
     component: () => import('@/views/UnauthorizedView.vue')
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 

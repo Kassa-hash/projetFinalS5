@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\UnlockAccountController;
 use App\Http\Controllers\FirebaseAuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProblemeRoutierController;
 
 Route::middleware('throttle:60,1')->group(function () {
     Route::post('/login', [FirebaseAuthController::class, 'login']);
