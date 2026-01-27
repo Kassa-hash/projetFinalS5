@@ -28,6 +28,10 @@ const logout = async () => {
               <router-link to="/login" class="nav-link">Connexion</router-link>
           </div>
 
+            <div v-if="!authStore.isAuthenticated" class="nav-links">
+              <router-link to="/manager" class="nav-link">Manager</router-link>
+          </div>
+
 
           <!-- Menu authentifié -->
           <div v-else class="nav-links">

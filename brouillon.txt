@@ -1,0 +1,9 @@
+Aucune donnée
+
+Aucun signalement trouvé. Synchronisez avec Firebase.
+
+✅
+Synchronisation réussie!
+📥 1 signalements récupérés de Firebase
+📤 0 signalements envoyés vers PostgreSQL
+⚠️ 1 erreur(s) 
