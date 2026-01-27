@@ -103,8 +103,8 @@ function initMap() {
     zoom: 13,
   });
 
-  map.addControl(new maplibregl.NavigationControl());
-  map.addControl(new maplibregl.FullscreenControl());
+  // map.addControl(new maplibregl.NavigationControl());
+  // map.addControl(new maplibregl.FullscreenControl());
 
   map.on('error', (e) => {
     console.error('Map error:', e);
@@ -213,65 +213,126 @@ function formatCurrency(amount: number): string {
 }
 </script>
 
-<style scoped>
+<style>
+/* =========================
+   CONTAINER GLOBAL
+========================= */
 .carte-container {
   width: 100%;
   height: 100vh;
   position: relative;
-  background-color: #f8f9fa;
+  background-color: #f4f6f9;
 }
 
+/* =========================
+   DASHBOARD
+========================= */
 .dashboard-summary {
   padding: 20px;
   background-color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   z-index: 10;
   position: relative;
 }
 
 .card {
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.3rem;
+  font-weight: 700;
   margin-bottom: 20px;
   color: #2c3e50;
 }
 
+/* =========================
+   GRID STATS
+========================= */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
 
+/* =========================
+   STAT BOX (HOVER)
+========================= */
 .stat-box {
+  position: relative;
   text-align: center;
-  padding: 15px;
+  padding: 18px;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
 }
 
+.stat-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 15%;
+  width: 70%;
+  height: 4px;
+  background: linear-gradient(90deg, #3498db, #6dd5fa);
+  border-radius: 0 0 6px 6px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-6px) scale(1.03);
+  background-color: #ffffff;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.15),
+    0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-box:hover::before {
+  opacity: 1;
+}
+
+.stat-box:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+/* =========================
+   ICÔNES
+========================= */
 .stat-icon {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
   margin: 0 auto 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.stat-box:hover .stat-icon {
+  transform: scale(1.15) rotate(3deg);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
 }
 
 .stat-icon.primary { background: #e3f2fd; color: #1976d2; }
-.stat-icon.info { background: #e0f7fa; color: #0097a7; }
+.stat-icon.info    { background: #e0f7fa; color: #0097a7; }
 .stat-icon.success { background: #e8f5e9; color: #388e3c; }
 .stat-icon.warning { background: #fff3e0; color: #f57c00; }
 
+/* =========================
+   TEXTE STATS
+========================= */
 .stat-box h3 {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.9rem;
+  font-weight: 800;
   margin: 10px 0 5px;
   color: #2c3e50;
 }
@@ -282,11 +343,14 @@ function formatCurrency(amount: number): string {
   color: #6c757d;
 }
 
+/* =========================
+   PROGRESS BAR
+========================= */
 .progress-bar {
   width: 100%;
   height: 8px;
   background-color: #e0e0e0;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-top: 10px;
   overflow: hidden;
 }
@@ -294,21 +358,28 @@ function formatCurrency(amount: number): string {
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #4caf50, #8bc34a);
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, filter 0.3s ease;
 }
 
+.stat-box:hover .progress-fill {
+  filter: brightness(1.2);
+}
+
+/* =========================
+   MAP
+========================= */
 .map-container {
   width: 100%;
   height: calc(100vh - 220px);
 }
 
+/* =========================
+   LOADING
+========================= */
 .loading-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.9);
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -319,54 +390,110 @@ function formatCurrency(amount: number): string {
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #f3f3f3;
+  border: 4px solid #e0e0e0;
   border-top: 4px solid #3498db;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
 .loading-overlay p {
   margin-top: 15px;
-  color: #2c3e50;
   font-size: 1rem;
+  color: #2c3e50;
 }
 
+/* =========================
+   MARKERS MAPLIBRE
+========================= */
+:deep(.custom-marker) {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border 0.2s ease;
+}
+
+:deep(.custom-marker:hover) {
+  transform: scale(1.4);
+  z-index: 5;
+  box-shadow:
+    0 0 0 6px rgba(52, 152, 219, 0.25),
+    0 8px 22px rgba(0, 0, 0, 0.35);
+  border: 2px solid #ffffff;
+}
+
+/* =========================
+   POPUP MAPLIBRE (LISIBILITÉ FIX)
+========================= */
 :deep(.maplibregl-popup-content) {
-  padding: 15px;
-  min-width: 250px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background-color: #ffffff !important;
+  color: #2c3e50 !important;
+  padding: 16px;
+  min-width: 260px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
-:deep(.popup-content) {
-  font-size: 0.9rem;
+/* Texte popup */
+:deep(.popup-content),
+:deep(.popup-content p),
+:deep(.popup-content span),
+:deep(.popup-content strong) {
+  color: #2c3e50 !important;
+  font-weight: 500;
 }
 
 :deep(.popup-content h6) {
-  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2d3d !important;
   border-bottom: 2px solid #3498db;
   padding-bottom: 8px;
   margin-bottom: 10px;
 }
 
 :deep(.popup-content p) {
-  margin: 8px 0;
-  line-height: 1.6;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
 }
 
+/* =========================
+   BADGES
+========================= */
 :deep(.badge) {
   padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-:deep(.badge-danger) { background: #dc3545; color: white; }
+:deep(.badge-danger)  { background: #dc3545; color: #fff; }
 :deep(.badge-warning) { background: #ffc107; color: #333; }
-:deep(.badge-success) { background: #28a745; color: white; }
+:deep(.badge-success) { background: #28a745; color: #fff; }
+
+/* =========================
+   BOUTON FERMETURE POPUP
+========================= */
+:deep(.maplibregl-popup-close-button) {
+  color: #2c3e50 !important;
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+:deep(.maplibregl-popup-close-button:hover) {
+  color: #e74c3c !important;
+  opacity: 1;
+}
+
+/* Flèche popup */
+:deep(.maplibregl-popup-tip) {
+  border-top-color: #ffffff !important;
+}
+
 </style>
