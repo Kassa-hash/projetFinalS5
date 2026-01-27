@@ -200,7 +200,7 @@ const removeNotification = (id: number) => {
 
 onMounted(async () => {
   try {
-    initMap();
+    await initMapAsync();
     await loadData();
   } catch (error: any) {
     console.error('Erreur au montage du composant:', error);
@@ -208,11 +208,62 @@ onMounted(async () => {
   }
 });
 
+async function initMapAsync() {
+  return new Promise<void>((resolve, reject) => {
+    if (!mapContainer.value) {
+      mapError.value = 'Conteneur de carte non disponible';
+      reject(new Error('Conteneur de carte non disponible'));
+      return;
+    }
+
+    try {
+      const styleUrl = 'http://localhost:8081/styles/basic-preview/style.json';
+      const center: [number, number] = [47.5079, -18.8792];
+
+      map = new maplibregl.Map({
+        container: mapContainer.value,
+        style: styleUrl,
+        center: center,
+        zoom: 13,
+      });
+
+      map.on('load', () => {
+        console.log('✅ Carte chargée avec succès');
+        mapError.value = null;
+        resolve();
+      });
+
+      map.on('error', (e) => {
+        console.error('❌ Erreur carte MapLibre:', e);
+        const errorMsg = e.error?.message || 'Erreur de chargement de la carte';
+        mapError.value = errorMsg;
+        addNotification('error', 'Erreur carte', errorMsg, 0);
+        reject(new Error(errorMsg));
+      });
+
+    } catch (error: any) {
+      console.error('❌ Erreur initialisation carte:', error);
+      mapError.value = error.message || 'Impossible d\'initialiser la carte';
+      addNotification('error', 'Erreur carte', mapError.value, 0);
+      reject(error);
+    }
+  });
+}
+
 async function loadData() {
   try {
     statsError.value = null;
     await problemesStore.loadAllData();
-    addMarkers();
+    
+    // S'assurer que la carte est prête avant d'ajouter les markers
+    if (map && map.loaded()) {
+      addMarkers();
+    } else if (map) {
+      // Attendre que la carte se charge
+      map.on('load', () => {
+        addMarkers();
+      });
+    }
     
     if (problemes.value.length === 0) {
       addNotification('info', 'Aucune donnée', 'Aucun signalement trouvé. Synchronisez avec Firebase.', 8000);
@@ -224,41 +275,7 @@ async function loadData() {
   }
 }
 
-function initMap() {
-  if (!mapContainer.value) {
-    mapError.value = 'Conteneur de carte non disponible';
-    return;
-  }
 
-  try {
-    const styleUrl = 'http://localhost:8081/styles/basic-preview/style.json';
-    const center: [number, number] = [47.5079, -18.8792];
-
-    map = new maplibregl.Map({
-      container: mapContainer.value,
-      style: styleUrl,
-      center: center,
-      zoom: 13,
-    });
-
-    map.on('load', () => {
-      console.log('✅ Carte chargée avec succès');
-      mapError.value = null;
-    });
-
-    map.on('error', (e) => {
-      console.error('❌ Erreur carte MapLibre:', e);
-      const errorMsg = e.error?.message || 'Erreur de chargement de la carte';
-      mapError.value = errorMsg;
-      addNotification('error', 'Erreur carte', errorMsg, 0);
-    });
-
-  } catch (error: any) {
-    console.error('❌ Erreur initialisation carte:', error);
-    mapError.value = error.message || 'Impossible d\'initialiser la carte';
-    addNotification('error', 'Erreur carte', mapError.value, 0);
-  }
-}
 
 function addMarkers() {
   if (!map) {
@@ -365,9 +382,9 @@ const handleSyncError = (error: string) => {
 }
 
 // Fonctions de rechargement
-const reloadMap = () => {
+const reloadMap = async () => {
   mapError.value = null;
-  initMap();
+  await initMapAsync();
   if (problemes.value.length > 0) {
     addMarkers();
   }
