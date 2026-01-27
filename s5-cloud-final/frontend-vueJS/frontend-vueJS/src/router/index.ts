@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import MapView from '@/views/MapView.vue'
+import Synchro  from '@/views/Synchro.vue'
+import SignalementsView from '@/views/SignalementsView.vue'
 
 const routes = [
   {
@@ -8,6 +10,12 @@ const routes = [
     name: 'home',
     component: MapView
   },
+
+  //   {
+  //   path: '/manager',
+  //   name: 'home',
+  //   component: Synchro
+  // },
   {
     path: '/login',
     name: 'login',
@@ -33,7 +41,12 @@ const routes = [
   {
     path: '/unauthorized',
     component: () => import('@/views/UnauthorizedView.vue')
-  }
+  },
+  {
+      path: '/manager',
+      name: 'signalements',
+      component: SignalementsView
+    }
 ]
 
 const router = createRouter({
