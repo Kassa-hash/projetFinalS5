@@ -61,8 +61,14 @@ export const useAuthStore = defineStore('auth', () => {
       
       // Gérer les deux types de réponses (Firebase et Postgres)
       if (response.id_token) {
+        // Firebase response
         token.value = response.id_token
         localStorage.setItem('token', response.id_token)
+      } else if (response.source === 'postgres') {
+        // Postgres fallback - créer un token local
+        const localToken = `postgres_${response.user?.id}_${Date.now()}`
+        token.value = localToken
+        localStorage.setItem('token', localToken)
       }
       
       user.value = response.user

@@ -33,6 +33,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiredRole: 'manager' }
   },
   {
+    path: '/unlock-accounts',
+    name: 'unlock-accounts',
+    component: () => import('@/views/UnlockAccountsView.vue'),
+    meta: { requiresAuth: true, requiredRole: 'manager' }
+  },
+  {
     path: '/unauthorized',
     name: 'unauthorized',
     component: () => import('@/views/UnauthorizedView.vue')

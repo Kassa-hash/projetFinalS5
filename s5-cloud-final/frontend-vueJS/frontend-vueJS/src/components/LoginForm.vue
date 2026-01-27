@@ -55,14 +55,30 @@ const password = ref('')
 
 const handleLogin = async () => {
   try {
-    await authStore.login(email.value, password.value)
-    // Redirection selon le rôle
-    if (authStore.isManager) {
-      router.push('/dashboard/manager')
-    } else if (authStore.isUser) {
-      router.push('/dashboard/user')
+    const response = await authStore.login(email.value, password.value)
+    
+    console.log('Login response:', response)
+    console.log('Auth store user:', authStore.user)
+    console.log('Auth store isAuthenticated:', authStore.isAuthenticated)
+    
+    // Attendre que user soit défini dans le store
+    if (response?.user) {
+      console.log('User role:', response.user.role)
+      // Redirection selon le rôle reçu
+      if (response.user.role === 'manager') {
+        console.log('Redirecting to manager dashboard')
+        router.push('/dashboard/manager')
+      } else if (response.user.role === 'user') {
+        console.log('Redirecting to user dashboard')
+        router.push('/dashboard/user')
+      } else {
+        console.warn('No valid role found:', response.user.role)
+      }
+    } else {
+      console.error('No user in response:', response)
     }
-  } catch (err) {
+  } catch (err: any) {
+    console.error('Login error:', err.message || err)
     // Erreur affichée dans le template
   }
 }

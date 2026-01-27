@@ -22,6 +22,51 @@ use Illuminate\Support\Facades\Validator;
 class UnlockAccountController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/locked-accounts",
+     *     summary="Lister les comptes bloqués",
+     *     description="Récupère la liste de tous les comptes bloqués (manuellement ou temporairement)",
+     *     tags={"Authentification"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des comptes bloqués",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="locked_accounts",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="name", type="string"),
+     *                     @OA\Property(property="email", type="string"),
+     *                     @OA\Property(property="role", type="string"),
+     *                     @OA\Property(property="account_lockout", type="boolean"),
+     *                     @OA\Property(property="login_attempts", type="integer"),
+     *                     @OA\Property(property="locked_until", type="string", nullable=true)
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function lockedAccounts(): JsonResponse
+    {
+        // Retourner les comptes qui sont bloqués:
+        // 1. Bloqués manuellement (account_lockout = true)
+        // 2. OU Ayant 3+ tentatives échouées (login_attempts >= 3)
+        $lockedAccounts = User::where('account_lockout', true)
+            ->orWhere('login_attempts', '>=', config('auth.max_login_attempts', 3))
+            ->select('id', 'name', 'email', 'role', 'account_lockout', 'login_attempts', 'locked_until')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'locked_accounts' => $lockedAccounts,
+            'count' => $lockedAccounts->count()
+        ], 200);
+    }
+
+    /**
      * @OA\Post(
      *     path="/unlock-account",
      *     summary="Débloquer un compte utilisateur",
@@ -106,6 +151,9 @@ class UnlockAccountController extends Controller
         }
 
         $user->resetLoginAttempts();
+
+        // Recharger les données depuis la base de données
+        $user->refresh();
 
         return response()->json([
             'success' => true,

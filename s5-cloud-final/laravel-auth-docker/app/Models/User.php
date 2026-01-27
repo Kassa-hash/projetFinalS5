@@ -25,6 +25,8 @@ class User extends Authenticatable
         'phone',
         'role',
         'account_lockout',
+        'login_attempts',
+        'locked_until',
     ];
 
     /**
@@ -46,6 +48,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'locked_until' => 'datetime',
             'password' => 'hashed',
             'account_lockout' => 'boolean',
         ];
@@ -53,10 +56,11 @@ class User extends Authenticatable
 
     /**
      * Check if account is locked
+     * Retourne true si le compte a 3+ tentatives (bloqué jusqu'au déblocage manuel)
      */
     public function isLocked(): bool
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        return $this->login_attempts >= config('auth.max_login_attempts', 3);
     }
 
     /**

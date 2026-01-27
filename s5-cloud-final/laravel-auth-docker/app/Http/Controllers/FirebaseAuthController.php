@@ -52,19 +52,36 @@ class FirebaseAuthController extends Controller
 
         $user = User::where('email', $credentials['email'])->first();
 
-        if ($user !== null && Hash::check($credentials['password'], $user->password)) {
+        if ($user !== null) {
+            // Vérifier si le compte est bloqué manuellement
             if ($user->account_lockout) {
                 throw ValidationException::withMessages([
-                    'email' => ['Ce compte est verrouillé.'],
+                    'email' => ['Ce compte est verrouillé. Veuillez contacter le support.'],
                 ]);
             }
 
-            return response()->json([
-                'source' => 'postgres',
-                'message' => 'Authenticated locally because Firebase could not be reached.',
-                'user' => $user,
-                'firebase_error' => $firebaseError,
-            ]);
+            // Vérifier si le compte est verrouillé temporairement (après 3 tentatives échouées)
+            if ($user->isLocked()) {
+                throw ValidationException::withMessages([
+                    'email' => ['Compte bloqué après trop de tentatives. Veuillez contacter un administrateur.'],
+                ]);
+            }
+
+            // Vérifier le mot de passe
+            if (Hash::check($credentials['password'], $user->password)) {
+                // Login réussi - réinitialiser les tentatives
+                $user->resetLoginAttempts();
+
+                return response()->json([
+                    'source' => 'postgres',
+                    'message' => 'Authenticated locally because Firebase could not be reached.',
+                    'user' => $user,
+                    'firebase_error' => $firebaseError,
+                ]);
+            }
+
+            // Mot de passe incorrect - incrémenter les tentatives
+            $user->incrementLoginAttempts();
         }
 
         throw ValidationException::withMessages([

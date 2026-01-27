@@ -16,3 +16,4 @@ Route::middleware('auth:sanctum')->group(function () {
 // Account management endpoints
 Route::post('/unlock-account', [UnlockAccountController::class, 'unlock']);
 Route::get('/account-status/{email}', [UnlockAccountController::class, 'status']);
+Route::get('/locked-accounts', [UnlockAccountController::class, 'lockedAccounts']);
