@@ -81,13 +81,13 @@
             <span class="btn-icon">🗺️</span>
             Gérer les Cartes
           </button>
+          <router-link to="/unlock-accounts" class="action-btn action-link">
+            <span class="btn-icon">🔓</span>
+            Débloquer Comptes
+          </router-link>
           <button class="action-btn">
             <span class="btn-icon">📊</span>
             Consulter Rapports
-          </button>
-          <button class="action-btn">
-            <span class="btn-icon">⚙️</span>
-            Paramètres Système
           </button>
         </div>
       </div>
@@ -260,6 +260,10 @@ const authStore = useAuthStore()
 .action-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 15px rgba(102, 126, 234, 0.3);
+}
+
+.action-link {
+  text-decoration: none;
 }
 
 .btn-icon {

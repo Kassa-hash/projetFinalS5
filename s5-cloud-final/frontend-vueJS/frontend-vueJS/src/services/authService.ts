@@ -51,6 +51,22 @@ export const authService = {
   getUser: async () => {
     const response = await api.get('/user')
     return response.data.user
+  },
+
+  // Account management
+  getLockedAccounts: async () => {
+    const response = await api.get('/locked-accounts')
+    return response.data.locked_accounts
+  },
+
+  getAccountStatus: async (email: string) => {
+    const response = await api.get(`/account-status/${email}`)
+    return response.data
+  },
+
+  unlockAccount: async (email: string) => {
+    const response = await api.post('/unlock-account', { email })
+    return response.data
   }
 }
 

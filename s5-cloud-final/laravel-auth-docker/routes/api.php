@@ -17,18 +17,4 @@ Route::middleware('auth:sanctum')->group(function () {
 // Account management endpoints
 Route::post('/unlock-account', [UnlockAccountController::class, 'unlock']);
 Route::get('/account-status/{email}', [UnlockAccountController::class, 'status']);
-
-Route::get('/problemes', [ProblemeRoutierController::class, 'index']);
-Route::get('/dashboard', [ProblemeRoutierController::class, 'dashboard']);
-
-
-Route::prefix('problemes')->group(function () {
-    Route::get('/', [ProblemeRoutierController::class, 'index']);
-    Route::post('/', [ProblemeRoutierController::class, 'store']);
-    Route::get('/{id}', [ProblemeRoutierController::class, 'show']);
-    Route::put('/{id}', [ProblemeRoutierController::class, 'update']);
-    Route::delete('/{id}', [ProblemeRoutierController::class, 'destroy']);
-    
-    // Route pour vérifier l'existence par firebase_id
-    Route::get('/check/{firebase_id}', [ProblemeRoutierController::class, 'checkExists']);
-});
+Route::get('/locked-accounts', [UnlockAccountController::class, 'lockedAccounts']);

@@ -28,7 +28,7 @@ return [
                 'default_bucket' => env('FIREBASE_STORAGE_DEFAULT_BUCKET'),
             ],
 
-            'cache_store' => env('FIREBASE_CACHE_STORE', 'file'),
+            'cache_store' => env('FIREBASE_CACHE_STORE', 'redis'),
 
             'logging' => [
                 'http_log_channel' => env('FIREBASE_HTTP_LOG_CHANNEL'),
@@ -37,7 +37,7 @@ return [
 
             'http_client_options' => [
                 // 'proxy' => env('FIREBASE_HTTP_CLIENT_PROXY'),
-                // 'timeout' => env('FIREBASE_HTTP_CLIENT_TIMEOUT'),
+                'timeout' => env('FIREBASE_HTTP_CLIENT_TIMEOUT', 30),
             ],
         ],
     ],
