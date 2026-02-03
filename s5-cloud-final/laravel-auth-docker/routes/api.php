@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\UnlockAccountController;
 use App\Http\Controllers\FirebaseAuthController;
+use App\Http\Controllers\PhotoController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProblemeRoutierController;
 
@@ -31,4 +32,10 @@ Route::prefix('problemes')->group(function () {
     
     // Route pour vérifier l'existence par firebase_id
     Route::get('/check/{firebase_id}', [ProblemeRoutierController::class, 'checkExists']);
+    
+    // Routes pour les photos
+    Route::get('/{id_probleme}/photos', [PhotoController::class, 'index']);
+    Route::post('/{id_probleme}/photos', [PhotoController::class, 'store']);
+    Route::put('/photos/{id}', [PhotoController::class, 'update']);
+    Route::delete('/photos/{id}', [PhotoController::class, 'destroy']);
 });

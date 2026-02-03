@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProblemeRoutier extends Model
 {
@@ -39,4 +40,9 @@ class ProblemeRoutier extends Model
         'date_debut' => 'date',
         'date_fin' => 'date',
     ];
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(Photo::class, 'id_probleme', 'id_probleme');
+    }
 }

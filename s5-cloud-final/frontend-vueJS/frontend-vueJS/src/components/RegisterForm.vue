@@ -70,9 +70,9 @@
         </div>
       </form>
 
-      <div class="form-footer">
+      <!-- <div class="form-footer">
         <p>Vous avez déjà un compte ? <router-link to="/login">Se connecter</router-link></p>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
