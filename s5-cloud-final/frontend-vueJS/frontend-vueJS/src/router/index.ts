@@ -1,27 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import AccueilView from '@/views/AccueilView.vue'
 import MapView from '@/views/MapView.vue'
-import Synchro  from '@/views/Synchro.vue'
 import SignalementsView from '@/views/SignalementsView.vue'
 
 const routes = [
   {
     path: '/',
     name: 'home',
+    component: AccueilView
+  },
+  {
+    path: '/carte',
+    name: 'carte',
     component: MapView
   },
-
-  //   {
-  //   path: '/manager',
-  //   name: 'home',
-  //   component: Synchro
-  // },
-
   {
-  path: '/sync-firebase',
-  name: 'sync-firebase',
-  component: () => import('@/views/SyncFirebaseView.vue')
-},
+    path: '/sync-firebase',
+    name: 'sync-firebase',
+    component: () => import('@/views/SyncFirebaseView.vue')
+  },
   {
     path: '/login',
     name: 'login',
@@ -32,7 +30,7 @@ const routes = [
     path: '/register',
     name: 'register',
     component: () => import('@/views/RegisterView.vue'),
-    meta: { requiresAuth: true, requiredRole: 'manager' }
+    meta: { requiresAuth: false }
   },
   {
     path: '/dashboard/user',
@@ -42,17 +40,20 @@ const routes = [
   {
     path: '/dashboard/manager',
     component: () => import('@/views/DashboardManagerView.vue'),
-    meta: { requiresAuth: true, requiredRole: 'manager' }
+    // meta: { requiresAuth: true, requiredRole: 'manager' }*
+    meta: { requiresAuth: false}
+
   },
   {
     path: '/unauthorized',
     component: () => import('@/views/UnauthorizedView.vue')
   },
   {
-      path: '/manager',
-      name: 'signalements',
-      component: SignalementsView
-    }
+    path: '/manager',
+    name: 'manager',
+    component: SignalementsView,
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
