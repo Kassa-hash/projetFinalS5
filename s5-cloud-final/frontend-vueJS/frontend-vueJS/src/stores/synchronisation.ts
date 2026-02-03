@@ -105,64 +105,243 @@ export const useSynchronisationStore = defineStore('synchronisation', () => {
     }
   }
 
-  // 📤 ENVOYER vers PostgreSQL
-  const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<any> => {
-    try {
-      console.log('📤 Envoi vers PostgreSQL:', signalement.titre)
+ // Dans src/stores/synchronisation.ts
+
+// 📤 ENVOYER vers PostgreSQL
+const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<any> => {
+  try {
+    console.log('📤 Envoi vers PostgreSQL:', signalement.titre)
+    console.log('📦 Données brutes:', signalement)
+    
+    // ✨ VALIDATION ET MAPPING DES VALEURS
+    const typesProblemeValides = ['nid_de_poule', 'fissure', 'affaissement', 'autre']
+    const typesRouteValides = ['pont', 'trottoir', 'route', 'piste_cyclable', 'autre']
+    const statutsValides = ['nouveau', 'en_cours', 'termine']
+    
+    // Fonction pour valider type_probleme
+    const validerTypeProbleme = (type: string): string => {
+      if (!type) return 'autre'
       
-      // Convertir les timestamps Firebase en dates ISO
-      const payload = {
-        titre: signalement.titre || 'Sans titre',
-        description: signalement.description || 'Sans description',
-        statut: signalement.statut || 'nouveau',
-        date_signalement: convertirDate(signalement.date_signalement),
-        date_debut: signalement.date_debut ? convertirDate(signalement.date_debut) : null,
-        date_fin: signalement.date_fin ? convertirDate(signalement.date_fin) : null,
-        surface_m2: Number(signalement.surface_m2) || 0,
-        budget: Number(signalement.budget) || 0,
-        entreprise: signalement.entreprise || null,
-        latitude: Number(signalement.latitude) || 0,
-        longitude: Number(signalement.longitude) || 0,
-        type_probleme: signalement.type_probleme || 'autre',
-        type_route: signalement.type_route || 'route',
-        firebase_id: signalement.firebase_id || signalement.id
+      // Normaliser la valeur (minuscules, remplacer espaces par underscores)
+      const typeNormalise = type.toLowerCase().trim().replace(/\s+/g, '_')
+      
+      if (typesProblemeValides.includes(typeNormalise)) {
+        return typeNormalise
       }
       
-      console.log('📦 Payload envoyé:', payload)
+      // Mapping intelligent de valeurs similaires
+      const mappings: Record<string, string> = {
+        'nid': 'nid_de_poule',
+        'poule': 'nid_de_poule',
+        'trou': 'nid_de_poule',
+        'crack': 'fissure',
+        'cassure': 'fissure',
+        'affaiss': 'affaissement',
+        'effondrement': 'affaissement'
+      }
       
-      const response = await axios.post(`${API_URL}/problemes`, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+      // Chercher une correspondance partielle
+      for (const [key, value] of Object.entries(mappings)) {
+        if (typeNormalise.includes(key)) {
+          console.warn(`⚠️ Type problème "${type}" mappé vers "${value}"`)
+          return value
         }
-      })
-      
-      console.log('✅ Réponse PostgreSQL:', response.data)
-      return response.data
-      
-    } catch (err: any) {
-      console.error('❌ Erreur détaillée envoi PostgreSQL:')
-      console.error('  URL:', `${API_URL}/problemes`)
-      console.error('  Status:', err.response?.status)
-      console.error('  Message:', err.response?.data?.message || err.message)
-      console.error('  Erreurs validation:', err.response?.data?.errors)
-      console.error('  Données complètes:', err.response?.data)
-      
-      // Message d'erreur détaillé
-      let errorMessage = err.message
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message
-      }
-      if (err.response?.data?.errors) {
-        const errors = Object.entries(err.response.data.errors)
-          .map(([field, msgs]: [string, any]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(' | ')
-        errorMessage += ` - ${errors}`
       }
       
-      throw new Error(errorMessage)
+      console.warn(`⚠️ Type problème invalide: "${type}", mapping vers "autre"`)
+      return 'autre'
     }
+    
+    // Fonction pour valider type_route
+    const validerTypeRoute = (type: string): string => {
+      if (!type) return 'route'
+      
+      const typeNormalise = type.toLowerCase().trim().replace(/\s+/g, '_')
+      
+      if (typesRouteValides.includes(typeNormalise)) {
+        return typeNormalise
+      }
+      
+      // Mapping intelligent
+      const mappings: Record<string, string> = {
+        'chaussee': 'route',
+        'voie': 'route',
+        'rue': 'route',
+        'avenue': 'route',
+        'passerelle': 'pont',
+        'viaduc': 'pont',
+        'trottoirs': 'trottoir',
+        'piste': 'piste_cyclable',
+        'cyclable': 'piste_cyclable',
+        'velo': 'piste_cyclable'
+      }
+      
+      for (const [key, value] of Object.entries(mappings)) {
+        if (typeNormalise.includes(key)) {
+          console.warn(`⚠️ Type route "${type}" mappé vers "${value}"`)
+          return value
+        }
+      }
+      
+      console.warn(`⚠️ Type route invalide: "${type}", mapping vers "route"`)
+      return 'route'
+    }
+    
+    // Fonction pour valider statut
+    const validerStatut = (statut: string): string => {
+      if (!statut) return 'nouveau'
+      
+      const statutNormalise = statut.toLowerCase().trim().replace(/\s+/g, '_')
+      
+      if (statutsValides.includes(statutNormalise)) {
+        return statutNormalise
+      }
+      
+      // Mapping des variations
+      const mappings: Record<string, string> = {
+        'new': 'nouveau',
+        'ouvert': 'nouveau',
+        'open': 'nouveau',
+        'progress': 'en_cours',
+        'encours': 'en_cours',
+        'traitement': 'en_cours',
+        'done': 'termine',
+        'fini': 'termine',
+        'complete': 'termine',
+        'closed': 'termine',
+        'ferme': 'termine'
+      }
+      
+      for (const [key, value] of Object.entries(mappings)) {
+        if (statutNormalise.includes(key)) {
+          console.warn(`⚠️ Statut "${statut}" mappé vers "${value}"`)
+          return value
+        }
+      }
+      
+      console.warn(`⚠️ Statut invalide: "${statut}", mapping vers "nouveau"`)
+      return 'nouveau'
+    }
+    
+    // Nettoyer l'entreprise (Firebase a " entreprise" avec espace au début)
+    let entreprise = signalement.entreprise || (signalement as any)[' entreprise']
+    if (entreprise && typeof entreprise === 'string') {
+      entreprise = entreprise.trim()
+    } else {
+      entreprise = null
+    }
+    
+    // 🔧 FONCTION pour récupérer une valeur avec gestion des espaces parasites dans les clés Firebase
+    const getFirebaseValue = (obj: any, key: string): any => {
+      // Essayer d'abord la clé exacte
+      if (obj[key] !== undefined) return obj[key]
+      // Essayer avec espace avant
+      if (obj[` ${key}`] !== undefined) return obj[` ${key}`]
+      // Essayer avec espace après
+      if (obj[`${key} `] !== undefined) return obj[`${key} `]
+      // Essayer avec espaces avant et après
+      if (obj[` ${key} `] !== undefined) return obj[` ${key} `]
+      return undefined
+    }
+    
+    // Récupérer les valeurs avec gestion des espaces
+    const titre = getFirebaseValue(signalement, 'titre') || 'Sans titre'
+    const description = getFirebaseValue(signalement, 'description') || 'Sans description'
+    const statut = getFirebaseValue(signalement, 'statut') || 'nouveau'
+    const latitude = getFirebaseValue(signalement, 'latitude') || 0
+    const longitude = getFirebaseValue(signalement, 'longitude') || 0
+    const surface_m2 = getFirebaseValue(signalement, 'surface_m2') || 0
+    const budget = getFirebaseValue(signalement, 'budget') || 0
+    const type_probleme = getFirebaseValue(signalement, 'type_probleme') || 'autre'
+    const type_route = getFirebaseValue(signalement, 'type_route') || 'route'
+    const date_signalement = getFirebaseValue(signalement, 'date_signalement')
+    const date_debut = getFirebaseValue(signalement, 'date_debut')
+    const date_fin = getFirebaseValue(signalement, 'date_fin')
+    
+    console.log('🔍 Valeurs extraites avec gestion des espaces:')
+    console.log('  - description brute:', getFirebaseValue(signalement, 'description'))
+    console.log('  - latitude brute:', getFirebaseValue(signalement, 'latitude'))
+    
+    // Convertir et valider les données
+    const payload = {
+      titre: String(titre).trim(),
+      description: String(description).trim(),
+      statut: validerStatut(statut),
+      date_signalement: convertirDate(date_signalement),
+      date_debut: date_debut ? convertirDate(date_debut) : null,
+      date_fin: date_fin ? convertirDate(date_fin) : null,
+      surface_m2: parseFloat(String(surface_m2)),
+      budget: parseFloat(String(budget)),
+      entreprise: entreprise,
+      latitude: parseFloat(String(latitude)),
+      longitude: parseFloat(String(longitude)),
+      type_probleme: validerTypeProbleme(type_probleme),
+      type_route: validerTypeRoute(type_route),
+      firebase_id: signalement.firebase_id || signalement.id || null
+    }
+    
+    console.log('📦 Payload envoyé:', JSON.stringify(payload, null, 2))
+    
+    // Validation avant envoi
+    if (!payload.titre || payload.titre === 'Sans titre') {
+      throw new Error('Le titre est requis')
+    }
+    
+    if (!payload.description || payload.description === 'Sans description') {
+      throw new Error('La description est requise')
+    }
+    
+    if (payload.latitude === 0 && payload.longitude === 0) {
+      console.warn('⚠️ Coordonnées GPS manquantes ou nulles')
+    }
+    
+    const response = await axios.post(`${API_URL}/problemes`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 10000 // 10 secondes timeout
+    })
+    
+    console.log('✅ Réponse PostgreSQL:', response.data)
+    return response.data
+    
+  } catch (err: any) {
+    console.error('❌ Erreur détaillée envoi PostgreSQL:')
+    console.error('  URL:', `${API_URL}/problemes`)
+    console.error('  Status:', err.response?.status)
+    console.error('  Message:', err.response?.data?.message || err.message)
+    console.error('  Erreurs validation:', err.response?.data?.errors)
+    console.error('  Messages:', err.response?.data?.messages)
+    console.error('  Données complètes:', err.response?.data)
+    
+    // Message d'erreur détaillé
+    let errorMessage = err.message
+    
+    if (err.response?.data?.messages) {
+      const messages = err.response.data.messages
+      const errorDetails = Object.entries(messages)
+        .map(([field, msgs]: [string, any]) => {
+          const msgArray = Array.isArray(msgs) ? msgs : [msgs]
+          return `${field}: ${msgArray.join(', ')}`
+        })
+        .join(' | ')
+      errorMessage = errorDetails
+    } else if (err.response?.data?.errors) {
+      const errors = Object.entries(err.response.data.errors)
+        .map(([field, msgs]: [string, any]) => {
+          const msgArray = Array.isArray(msgs) ? msgs : [msgs]
+          return `${field}: ${msgArray.join(', ')}`
+        })
+        .join(' | ')
+      errorMessage = errors
+    } else if (err.response?.data?.message) {
+      errorMessage = err.response.data.message
+    }
+    
+    throw new Error(errorMessage)
   }
+}
 
   // 📤 ENVOYER vers Firebase
   const envoyerVersFirebase = async (signalement: SignalementFirebase): Promise<string> => {

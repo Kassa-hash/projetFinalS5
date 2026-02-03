@@ -136,39 +136,123 @@ export const useSynchronisationStore = defineStore('synchronisation', () => {
     }
   }
 
-  // 📤 ENVOYER vers PostgreSQL
-  const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<any> => {
-    try {
-      console.log('📤 Envoi vers PostgreSQL:', signalement.titre)
-      
-      // Convertir les timestamps Firebase en dates ISO
-      const payload = {
-        titre: signalement.titre,
-        description: signalement.description,
-        statut: signalement.statut,
-        date_signalement: convertirDate(signalement.date_signalement),
-        date_debut: signalement.date_debut ? convertirDate(signalement.date_debut) : null,
-        date_fin: signalement.date_fin ? convertirDate(signalement.date_fin) : null,
-        surface_m2: signalement.surface_m2,
-        budget: signalement.budget,
-        entreprise: signalement.entreprise || null,
-        latitude: signalement.latitude,
-        longitude: signalement.longitude,
-        type_probleme: signalement.type_probleme,
-        type_route: signalement.type_route,
-        firebase_id: signalement.firebase_id || signalement.id
+// Modifier la fonction envoyerVersPostgreSQL dans synchronisation.ts
+
+const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<any> => {
+  try {
+    console.log('📤 Envoi vers PostgreSQL:', signalement.titre)
+    console.log('📦 Données brutes:', signalement)
+    
+    // ✨ VALIDATION ET MAPPING DES VALEURS
+    const typesProblemeValides = ['nid_de_poule', 'fissure', 'affaissement', 'autre']
+    const typesRouteValides = ['pont', 'trottoir', 'route', 'piste_cyclable', 'autre']
+    const statutsValides = ['nouveau', 'en_cours', 'termine']
+    
+    // Fonction pour valider ou mapper vers "autre"
+    const validerTypeProbleme = (type: string): string => {
+      if (!type || !typesProblemeValides.includes(type)) {
+        console.warn(`⚠️ Type problème invalide: "${type}", mapping vers "autre"`)
+        return 'autre'
       }
-      
-      const response = await axios.post(`${API_URL}/problemes`, payload)
-      
-      console.log('✅ Signalement envoyé vers PostgreSQL:', response.data)
-      return response.data
-      
-    } catch (err: any) {
-      console.error('❌ Erreur envoi PostgreSQL:', err)
-      throw err
+      return type
     }
+    
+    const validerTypeRoute = (type: string): string => {
+      if (!type || !typesRouteValides.includes(type)) {
+        console.warn(`⚠️ Type route invalide: "${type}", mapping vers "route"`)
+        return 'route'
+      }
+      return type
+    }
+    
+    const validerStatut = (statut: string): string => {
+      if (!statut || !statutsValides.includes(statut)) {
+        console.warn(`⚠️ Statut invalide: "${statut}", mapping vers "nouveau"`)
+        return 'nouveau'
+      }
+      return statut
+    }
+    
+    // Convertir et valider les données
+    const payload = {
+      titre: String(signalement.titre || 'Sans titre').trim(),
+      description: String(signalement.description || 'Sans description').trim(),
+      statut: validerStatut(signalement.statut),
+      date_signalement: convertirDate(signalement.date_signalement),
+      date_debut: signalement.date_debut ? convertirDate(signalement.date_debut) : null,
+      date_fin: signalement.date_fin ? convertirDate(signalement.date_fin) : null,
+      surface_m2: parseFloat(String(signalement.surface_m2 || 0)),
+      budget: parseFloat(String(signalement.budget || 0)),
+      entreprise: signalement.entreprise ? String(signalement.entreprise).trim() : null,
+      latitude: parseFloat(String(signalement.latitude || 0)),
+      longitude: parseFloat(String(signalement.longitude || 0)),
+      type_probleme: validerTypeProbleme(signalement.type_probleme),
+      type_route: validerTypeRoute(signalement.type_route),
+      firebase_id: signalement.firebase_id || signalement.id || null
+    }
+    
+    console.log('📦 Payload envoyé:', JSON.stringify(payload, null, 2))
+    
+    // Validation avant envoi
+    if (!payload.titre || payload.titre === 'Sans titre') {
+      throw new Error('Le titre est requis')
+    }
+    
+    if (!payload.description || payload.description === 'Sans description') {
+      throw new Error('La description est requise')
+    }
+    
+    if (payload.latitude === 0 || payload.longitude === 0) {
+      console.warn('⚠️ Coordonnées GPS manquantes ou nulles')
+    }
+    
+    const response = await axios.post(`${API_URL}/problemes`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    })
+    
+    console.log('✅ Réponse PostgreSQL:', response.data)
+    return response.data
+    
+  } catch (err: any) {
+    console.error('❌ Erreur détaillée envoi PostgreSQL:')
+    console.error('  URL:', `${API_URL}/problemes`)
+    console.error('  Status:', err.response?.status)
+    console.error('  Message:', err.response?.data?.message || err.message)
+    console.error('  Erreurs validation:', err.response?.data?.errors)
+    console.error('  Messages:', err.response?.data?.messages)
+    console.error('  Données complètes:', err.response?.data)
+    
+    // Message d'erreur détaillé
+    let errorMessage = err.message
+    
+    if (err.response?.data?.messages) {
+      const messages = err.response.data.messages
+      const errorDetails = Object.entries(messages)
+        .map(([field, msgs]: [string, any]) => {
+          const msgArray = Array.isArray(msgs) ? msgs : [msgs]
+          return `${field}: ${msgArray.join(', ')}`
+        })
+        .join(' | ')
+      errorMessage = errorDetails
+    } else if (err.response?.data?.errors) {
+      const errors = Object.entries(err.response.data.errors)
+        .map(([field, msgs]: [string, any]) => {
+          const msgArray = Array.isArray(msgs) ? msgs : [msgs]
+          return `${field}: ${msgArray.join(', ')}`
+        })
+        .join(' | ')
+      errorMessage = errors
+    } else if (err.response?.data?.message) {
+      errorMessage = err.response.data.message
+    }
+    
+    throw new Error(errorMessage)
   }
+}
 
   // 📤 ENVOYER vers Firebase
   const envoyerVersFirebase = async (signalement: SignalementFirebase): Promise<string> => {
