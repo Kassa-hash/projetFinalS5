@@ -365,6 +365,43 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
     }
   }
 
+  // 🔄 METTRE À JOUR dans Firebase
+  const mettreAJourFirebase = async (firebaseId: string, updates: Partial<SignalementFirebase>): Promise<void> => {
+    try {
+      console.log('🔄 [FIREBASE UPDATE] Mise à jour du document:', firebaseId)
+      console.log('🔄 [FIREBASE UPDATE] Données à mettre à jour:', updates)
+      
+      if (!firebaseId) {
+        throw new Error('firebase_id manquant')
+      }
+      
+      const docRef = doc(db, 'signalements', firebaseId)
+      
+      // Préparer les données pour Firebase
+      const dataToUpdate: any = {
+        ...updates,
+        derniere_maj: serverTimestamp()
+      }
+      
+      // Supprimer les champs indésirables
+      delete dataToUpdate.id
+      delete dataToUpdate.firebase_id
+      delete dataToUpdate.synced
+      
+      await updateDoc(docRef, dataToUpdate)
+      
+      console.log('✅ [FIREBASE UPDATE] Document mis à jour avec succès:', firebaseId)
+      
+    } catch (err: any) {
+      console.error('❌ [FIREBASE UPDATE] Erreur la mise à jour Firebase:', {
+        firebaseId,
+        error: err.message,
+        code: err.code
+      })
+      throw err
+    }
+  }
+
   // 🔄 SYNCHRONISATION COMPLÈTE
   const synchroniser = async () => {
     isLoading.value = true
@@ -579,6 +616,7 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
     recupererDepuisFirebase,
     envoyerVersPostgreSQL,
     envoyerVersFirebase,
+    mettreAJourFirebase,
     synchroniser,
     ajouterSignalement,
     chargerDonneesLocales,

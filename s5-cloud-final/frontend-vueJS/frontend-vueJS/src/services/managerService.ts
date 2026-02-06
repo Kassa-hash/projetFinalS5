@@ -1,4 +1,5 @@
 import apiClient from './api'
+import { useSynchronisationStore } from '@/stores/synchronisation'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
@@ -121,7 +122,9 @@ export const managerService = {
     }
   },
 
-  async updateProbleme(id: number, data: Partial<ProblemeRoutier>): Promise<ProblemeRoutier> {
+  async updateProbleme(id: number, data: Partial<ProblemeRoutier>, firebaseId?: string): Promise<ProblemeRoutier> {
+    let updatedProbleme: ProblemeRoutier | null = null
+    
     try {
       // Normaliser le statut et valider les données
       const cleanData: any = {
@@ -136,15 +139,71 @@ export const managerService = {
         date_signalement: data.date_signalement || null,
         date_debut: data.date_debut || null,
         date_fin: data.date_fin || null,
-        // Ne pas oublier latitude/longitude si nécessaire
         latitude: data.latitude,
         longitude: data.longitude
       }
 
-      console.log('Sending update data:', cleanData)
+      console.log('🔵 [UPDATE] Envoi des données:', { id, cleanData })
+      
+      // 1️⃣ Mettre à jour PostgreSQL
       const response = await apiClient.put(`${API_URL}/problemes/${id}`, cleanData)
-      return response.data.data || response.data
+      
+      console.log('🟢 [UPDATE] Réponse reçue:', response.status, response.data)
+      
+      updatedProbleme = response.data?.data || response.data
+      
+      // 2️⃣ Synchroniser vers Firebase (async, ne bloque pas)
+      try {
+        // Récupérer le firebase_id du problème s'il n'est pas fourni
+        let fbId = firebaseId
+        
+        if (!fbId && updatedProbleme?.firebase_id) {
+          fbId = updatedProbleme.firebase_id
+        }
+        
+        // Si on a un firebase_id, synchroniser
+        if (fbId) {
+          console.log('🔄 [SYNC] Synchronisation vers Firebase en arrière-plan...')
+          
+          const syncStore = useSynchronisationStore()
+          
+          // Préparer les données pour Firebase
+          const firebaseData = {
+            titre: cleanData.titre,
+            description: cleanData.description,
+            statut: cleanData.statut,
+            surface_m2: cleanData.surface_m2,
+            budget: cleanData.budget,
+            entreprise: cleanData.entreprise,
+            type_probleme: cleanData.type_probleme,
+            type_route: cleanData.type_route,
+            date_signalement: cleanData.date_signalement,
+            date_debut: cleanData.date_debut,
+            date_fin: cleanData.date_fin,
+            latitude: cleanData.latitude,
+            longitude: cleanData.longitude
+          }
+          
+          // Appel asynchrone sans attendre
+          syncStore.mettreAJourFirebase(fbId, firebaseData)
+            .then(() => {
+              console.log('✅ [SYNC] Synchronisation Firebase réussie!')
+            })
+            .catch((err: any) => {
+              console.warn('⚠️ [SYNC] Erreur synchronisation Firebase (PostgreSQL mis à jour):', err.message)
+              // L'erreur ne bloque pas car PostgreSQL a déjà été mismaj
+            })
+        } else {
+          console.log('⚠️ [SYNC] Pas de firebase_id, synchronisation impossible')
+        }
+      } catch (syncErr: any) {
+        console.warn('⚠️ [SYNC] Erreur lors du setup de synchronisation:', syncErr.message)
+        // Cela ne doit pas bloquer le succès PostgreSQL
+      }
+      
+      return updatedProbleme
     } catch (error: any) {
+      console.log('🔴 [UPDATE ERROR]', error.response?.status, error.response?.data)
       const errorMessage = error.response?.data?.errors || error.response?.data?.message || error.message
       console.error('Error updating probleme:', errorMessage)
       throw error

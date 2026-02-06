@@ -33,6 +33,43 @@ Route::prefix('users')->group(function () {
 Route::get('/problemes', [ProblemeRoutierController::class, 'index']);
 Route::get('/dashboard', [ProblemeRoutierController::class, 'dashboard']);
 
+// Endpoint de debug
+Route::get('/debug/problemes', function() {
+    $problemes = \App\Models\ProblemeRoutier::all();
+    return response()->json([
+        'total' => count($problemes),
+        'problemes' => $problemes->map(fn($p) => [
+            'id_probleme' => $p->id_probleme,
+            'titre' => $p->titre,
+            'statut' => $p->statut,
+            'latitude' => $p->latitude,
+            'longitude' => $p->longitude
+        ])
+    ]);
+});
+
+// Endpoint de test pour mise à jour directe
+Route::post('/debug/update-test/{id}', function($id) {
+    try {
+        $probleme = \App\Models\ProblemeRoutier::findOrFail($id);
+        $probleme->update([
+            'statut' => 'en_cours',
+            'titre' => 'TEST UPDATE - ' . now()->format('Y-m-d H:i:s')
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Test update réussi',
+            'data' => $probleme
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 
 Route::prefix('problemes')->group(function () {
     Route::get('/', [ProblemeRoutierController::class, 'index']);
