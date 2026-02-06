@@ -1,43 +1,56 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api"; // Axios configuré
 
 function Login() {
-  const [mail, setMail] = useState("");
-  const [mdp, setMdp] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault(); // empêche le rechargement
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
-    console.log("Email :", mail);
-    console.log("Mot de passe :", mdp);
+    try {
+      // On appelle l'API Laravel /login
+      const res = await api.post("/login", { email, password });
 
-    // ici tu appelleras ton API
+      // Stocker le token retourné par Laravel (Sanctum ou JWT)
+      localStorage.setItem("token", res.data.token);
+
+      // Redirection vers le dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setError("Email ou mot de passe incorrect");
+    }
   };
 
   return (
-    <div>
-      <h1>Test Login</h1>
+    <form onSubmit={handleSubmit}>
+      <h1>Connexion</h1>
 
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="mail">Email:</label>
-        <input
-          type="email"
-          id="mail"
-          value={mail}
-          onChange={(e) => setMail(e.target.value)}
-        />
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-        <label>Mot de passe:</label>
-        <input
-          type="password"
-          value={mdp}
-          onChange={(e) => setMdp(e.target.value)}
-        />
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
 
-        <button type="submit">Se connecter</button>
-      </form>
+      <input
+        type="password"
+        placeholder="Mot de passe"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
 
-    </div>
+      <button type="submit">Se connecter</button>
+    </form>
   );
 }
 
