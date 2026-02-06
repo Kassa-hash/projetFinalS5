@@ -82,9 +82,9 @@
         </div>
       </form>
 
-      <div class="form-footer">
+      <!-- <div class="form-footer">
         <p>Pas encore de compte ? <router-link to="/register">S'inscrire</router-link></p>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
