@@ -123,10 +123,30 @@ export const managerService = {
 
   async updateProbleme(id: number, data: Partial<ProblemeRoutier>): Promise<ProblemeRoutier> {
     try {
-      const response = await apiClient.put(`${API_URL}/problemes/${id}`, data)
+      // Normaliser le statut et valider les données
+      const cleanData: any = {
+        titre: data.titre?.trim() || '',
+        description: data.description?.trim() || '',
+        statut: data.statut === 'terminé' ? 'termine' : data.statut,
+        surface_m2: Number(data.surface_m2) || 0,
+        budget: Number(data.budget) || 0,
+        entreprise: data.entreprise?.trim() || null,
+        type_probleme: data.type_probleme?.trim() || '',
+        type_route: data.type_route?.trim() || '',
+        date_signalement: data.date_signalement || null,
+        date_debut: data.date_debut || null,
+        date_fin: data.date_fin || null,
+        // Ne pas oublier latitude/longitude si nécessaire
+        latitude: data.latitude,
+        longitude: data.longitude
+      }
+
+      console.log('Sending update data:', cleanData)
+      const response = await apiClient.put(`${API_URL}/problemes/${id}`, cleanData)
       return response.data.data || response.data
-    } catch (error) {
-      console.error('Error updating probleme:', error)
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.errors || error.response?.data?.message || error.message
+      console.error('Error updating probleme:', errorMessage)
       throw error
     }
   },

@@ -14,7 +14,11 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error);
+    if (error.response?.status === 422) {
+      console.error('API Validation Error:', error.response?.data?.errors || error.response?.data?.message);
+    } else {
+      console.error('API Error:', error);
+    }
     return Promise.reject(error);
   }
 );
