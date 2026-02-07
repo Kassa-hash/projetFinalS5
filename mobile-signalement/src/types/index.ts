@@ -20,6 +20,7 @@ export interface Probleme {
   date_resolution?: string;
   user_id?: number;
   photos?: Photo[];
+  photoUrls?: string[];  // Photos en base64 depuis Firestore
 }
 
 export interface Photo {

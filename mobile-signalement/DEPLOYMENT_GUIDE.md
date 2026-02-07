@@ -190,6 +190,22 @@ VITE_API_URL=http://localhost:8000/api
 3. **Télécharger `google-services.json`**
 4. **Placer le fichier** : `android/app/google-services.json`
 
+### 3.4 Configuration Firebase Storage (pour les photos)
+1. **Firebase Console** → **Storage** (ou créer si absent)
+2. **Règles** → Remplacer par :
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /photos/{user_id}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == user_id;
+    }
+  }
+}
+```
+3. **Publier les règles**
+
 ---
 
 ## 4. INSTALLATION DES DÉPENDANCES

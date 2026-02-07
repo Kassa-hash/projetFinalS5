@@ -162,6 +162,18 @@ export default function MesSignalementsPage() {
                     {s.description && (
                       <p className="ms-card-desc">{s.description}</p>
                     )}
+                    {s.photos && s.photos.length > 0 && (
+                      <div className="ms-card-photos">
+                        {s.photos.map((photo, idx) => (
+                          <img
+                            key={idx}
+                            src={photo.url || photo.chemin}
+                            alt={`Photo ${idx + 1}`}
+                            className="ms-photo-thumb"
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="ms-card-footer">
                       {s.adresse && (
                         <span className="ms-card-address">📍 {s.adresse}</span>

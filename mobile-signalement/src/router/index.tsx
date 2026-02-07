@@ -5,6 +5,7 @@ import RegisterPage from '../pages/RegisterPage';
 import MapPage from '../pages/MapPage';
 import AddSignalementPage from '../pages/AddSignalementPage';
 import MesSignalementsPage from '../pages/MesSignalementsPage';
+import SignalementDetailsPage from '../pages/SignalementDetailsPage';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 const router = createBrowserRouter([
@@ -35,6 +36,10 @@ const router = createBrowserRouter([
       {
         path: '/mes-signalements',
         element: <MesSignalementsPage />,
+      },
+      {
+        path: '/signalements/:id',
+        element: <SignalementDetailsPage />,
       },
     ],
   },

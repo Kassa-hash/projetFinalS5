@@ -7,6 +7,7 @@ import {
   setPersistence,
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,4 +28,7 @@ setPersistence(auth, browserLocalPersistence);
 // Firestore pour la synchronisation
 const db = getFirestore(app);
 
-export { app, auth, db };
+// Storage pour les photos
+const storage = getStorage(app);
+
+export { app, auth, db, storage };
