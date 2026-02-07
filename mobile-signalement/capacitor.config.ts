@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.signalement.app',
+  appId: 'com.itu.app',
   appName: 'Signalement',
   webDir: 'dist',
   server: {

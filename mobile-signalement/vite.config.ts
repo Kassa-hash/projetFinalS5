@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    // Séparer les gros modules en chunks pour de meilleures performances
+    // Ne pas externaliser Capacitor en production (APK)
+    // Les modules Capacitor doivent être bundlés directement
     rollupOptions: {
       output: {
         manualChunks: {
@@ -14,5 +15,8 @@ export default defineConfig({
         },
       },
     },
+    // Optimiser la taille du bundle
+    target: 'es2020',
+    minify: 'terser',
   },
 })

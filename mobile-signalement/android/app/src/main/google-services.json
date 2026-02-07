@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "893011046982",
+    "project_id": "cloud-807c9",
+    "storage_bucket": "cloud-807c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893011046982:android:64b10a724fcb1f66755047",
+        "android_client_info": {
+          "package_name": "com.itu.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYJRtfxTyQxKXtS_zV0UA1WHD4_QQ2AaU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
