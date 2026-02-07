@@ -15,6 +15,7 @@ import {
   logout as firebaseLogout,
   onAuthChange,
 } from '../firebase/authService';
+import { initializePushNotifications } from '../services/pushNotificationService';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -56,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: fbUser.email || '',
           role: 'user',
         });
+        // Initialiser les notifications push
+        await initializePushNotifications();
       } else {
         setToken(null);
         setUser(null);
