@@ -15,46 +15,116 @@ Application mobile React + Capacitor pour signaler des problèmes routiers avec 
 ## 1. PRÉREQUIS - Installation sur la machine
 
 ### 1.1 Node.js et npm
+
+**Windows :**
 ```bash
-# Télécharger depuis https://nodejs.org/
-# Version recommandée : LTS 18+
+# Option 1 : Télécharger l'installateur depuis https://nodejs.org/
+# Version recommandée : LTS 20.x ou plus
+# Exécuter l'installateur (.msi) et suivre les instructions
+
+# Option 2 : Avec chocolatey (si installé)
+choco install nodejs
+
 # Vérifier l'installation :
-node --version  # v18.x.x ou plus
+node --version  # v20.x.x ou plus
 npm --version   # 10.x.x ou plus
 ```
 
-### 1.2 Java Development Kit (JDK)
+### 1.2 Java Development Kit (JDK 21+)
+
+**Windows :**
 ```bash
-# Android Studio inclut JDK
-# OU télécharger séparément depuis https://www.oracle.com/java/technologies/javase/jdk21-archive.html
-# Version requise : JDK 21+
-java -version
+# Télécharger depuis :
+# https://www.oracle.com/java/technologies/javase/jdk21-archive.html
+
+# Ou avec Chocolatey :
+choco install jdk21
+
+# Vérifier l'installation :
+java -version      # java version "21.x.x"
+javac -version     # javac 21.x.x
+```
+
+**Configurer la variable JAVA_HOME :**
+```bash
+# Windows (Panneau de configuration) :
+# Paramètres → Variables d'environnement système
+# Nouvelle variable :
+#   JAVA_HOME = C:\Program Files\Java\jdk-21
+
+# Ou en PowerShell (Admin) :
+[Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\Java\jdk-21", "Machine")
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+
+# Vérifier :
+echo %JAVA_HOME%
 ```
 
 ### 1.3 Android Studio
+
+**Installation Windows :**
 ```bash
-# Télécharger depuis https://developer.android.com/studio
-# Installation complète avec SDK :
-# - Android SDK Platform-Tools
-# - Android SDK Build-Tools (35.0.0+)
-# - Android SDK Platform (API 36)
+# 1. Télécharger depuis https://developer.android.com/studio
+# 2. Exécuter l'installateur
+# 3. Cocher "Android SDK" + "Android Virtual Device"
+# 4. Compléter l'installation
+
+# Après installation, ouvrir Android Studio et :
+# Tools → SDK Manager → Installer :
+#   - SDK Platforms → Android 15.x (API 36)
+#   - SDK Tools → 
+#       - Android SDK Platform-Tools (35.0.0+)
+#       - Android SDK Build-Tools (35.0.0+)
+#       - Google Play services
+#       - Android Emulator
 ```
 
-### 1.4 Android SDK (Configuration)
+### 1.4 Android SDK - Configuration ANDROID_HOME
+
+**Windows :**
 ```bash
-# Définir ANDROID_HOME en variable d'environnement Windows :
-# Paramètres → Variables d'environnement système
-# Nouvelle variable :
-#   ANDROID_HOME = C:\Users\[VotreUtilisateur]\AppData\Local\Android\Sdk
+# Android Studio installe SDK par défaut à :
+# C:\Users\[VotreUtilisateur]\AppData\Local\Android\Sdk
+
+# Définir la variable d'environnement (Admin PowerShell) :
+[Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:USERPROFILE\AppData\Local\Android\Sdk", "Machine")
+$env:ANDROID_HOME = "$env:USERPROFILE\AppData\Local\Android\Sdk"
 
 # Vérifier :
-echo %ANDROID_HOME%
+echo %ANDROID_HOME%  # Doit retourner le chemin du SDK
+
+# Ajouter platform-tools au PATH (Admin PowerShell) :
+$androidSdk = "$env:USERPROFILE\AppData\Local\Android\Sdk"
+$currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
+if ($currentPath -notlike "*$androidSdk\platform-tools*") {
+    [Environment]::SetEnvironmentVariable("PATH", "$currentPath;$androidSdk\platform-tools", "Machine")
+}
+
+# Vérifier adb :
+adb --version  # Doit afficher : Android Debug Bridge version
 ```
 
 ### 1.5 Gradle Wrapper
+
 ```bash
-# Déjà inclus dans le projet
+# Le projet inclut déjà Gradle Wrapper
 # Pas de configuration supplémentaire nécessaire
+
+# Vérifier que les fichiers existent :
+# - mobile-signalement/android/gradlew (Linux/Mac)
+# - mobile-signalement/android/gradlew.bat (Windows)
+```
+
+### 1.6 Git (optionnel mais recommandé)
+
+```bash
+# Télécharger depuis https://git-scm.com/download/win
+
+# Ou avec Chocolatey :
+choco install git
+
+# Vérifier :
+git --version  # git version 2.x.x
 ```
 
 ---
@@ -124,20 +194,85 @@ VITE_API_URL=http://localhost:8000/api
 
 ## 4. INSTALLATION DES DÉPENDANCES
 
+### 4.1 Dépendances npm (Frontend + Capacitor)
+
 ```bash
 cd mobile-signalement
 
-# Installer les dépendances npm
+# Installer TOUTES les dépendances du projet
 npm install
 
-# Cette commande installe :
-# - React, TypeScript, Vite
-# - Firebase SDK
-# - Capacitor et tous les plugins
-# - Leaflet, Axios, etc.
+# Cette commande installe automatiquement :
+# Frontend :
+#   - react (19.x)
+#   - react-dom (19.x)
+#   - react-router-dom (6.x)
+#   - typescript (5.x)
+#   - vite (7.x)
+#
+# Firebase :
+#   - firebase (10.x)
+#   - @capacitor-firebase/messaging (6.x)
+#
+# Mobile :
+#   - @capacitor/core (6.x)
+#   - @capacitor/android (6.x)
+#   - @capacitor/app (6.x)
+#   - @capacitor/geolocation (6.x)
+#   - @capacitor/local-notifications (6.x)
+#
+# Cartes :
+#   - leaflet (1.9.x)
+#   - axios (1.x)
+#
+# Autres :
+#   - date-fns (3.x)
+#   - lucide-react (0.x)
 ```
 
-**Durée estimée:** 5-10 minutes (selon la connexion)
+**Durée estimée:** 5-10 minutes
+
+**Vérifier l'installation :**
+```bash
+# Vérifier que package-lock.json est créé
+ls package-lock.json  # Doit exister
+
+# Vérifier que node_modules est créé
+ls node_modules  # Doit contenir ~1000 dossiers
+
+# Vérifier les versions critiques
+npm list react
+npm list typescript
+npm list @capacitor/core
+```
+
+### 4.2 Dépendances Android (Gradle)
+
+```bash
+# Gradle Wrapper télécharger automatiquement via :
+cd android
+./gradlew.bat --version  # Sur Windows
+
+# Cela télécharge Gradle (~200 MB) et affiche la version
+# Vous verrez quelque chose comme :
+# Gradle 8.7.0
+
+# C'est OK si ça prend plusieurs minutes la première fois
+```
+
+### 4.3 Installation optionnelle : Commandes globales utiles
+
+```bash
+# Installer Capacitor CLI globalement (optionnel)
+npm install -g @capacitor/cli
+
+# Vérifier :
+cap --version  # Doit afficher la version Capacitor
+
+# Installer Android SDK Command-line Tools (optionnel)
+# Permet d'utiliser sdkmanager en ligne de commande
+sdkmanager --version
+```
 
 ---
 
@@ -243,37 +378,98 @@ setx ANDROID_HOME "C:\Users\[VotreUtilisateur]\AppData\Local\Android\Sdk"
 echo %ANDROID_HOME%
 ```
 
-### 10.2 Erreur : "Gradle build failed"
+### 10.2 Erreur : "JAVA_HOME not set"
+```bash
+# Windows (PowerShell Admin) :
+[Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\Java\jdk-21", "Machine")
+
+# Vérifier :
+echo %JAVA_HOME%
+java -version
+```
+
+### 10.3 Erreur : "npm command not found"
+```bash
+# Node.js n'est pas installé ou le PATH n'est pas à jour
+# Solution :
+# 1. Télécharger https://nodejs.org/ (LTS 20+)
+# 2. Exécuter l'installateur complètement
+# 3. Redémarrer le terminal ET l'ordinateur
+# 4. Vérifier :
+node --version
+npm --version
+```
+
+### 10.4 Erreur : "gradlew.bat not found"
+```bash
+# Le dossier android/ n'est pas correctement créé
+# Solution :
+cd mobile-signalement
+npx cap sync android
+# Cela recréera le dossier android avec gradlew.bat
+```
+
+### 10.5 Erreur : "Gradle build failed"
 ```bash
 # Nettoyer et réessayer
+cd mobile-signalement
 cd android
-gradlew clean
+./gradlew.bat clean
 cd ..
 npm run build
 npx cap sync android
 ```
 
-### 10.3 Erreur : "Duplicate androidx classes"
+### 10.6 Erreur : "Duplicate androidx classes"
 ```bash
 # Déjà corrigé dans android/build.gradle
 # Si persiste : 
+# Dans Android Studio :
 # Build → Clean Project
-# Build → Rebuild Project (dans Android Studio)
+# Build → Rebuild Project
 ```
 
-### 10.4 Pas de notification affichée
+### 10.7 Pas de notification affichée
 ```
 Vérifier :
-1. Permissions Android → Paramètres → Notifications
-2. google-services.json présent dans android/app/
-3. L'app n'est pas forcée en sleep
-4. Consulter les logs : adb logcat | grep "firebase"
+1. google-services.json présent dans android/app/
+2. Permissions Android → Paramètres → Notifications
+3. Consulter les logs : adb logcat | grep "firebase"
+4. L'app n'est pas forcée en sleep
 ```
 
-### 10.5 "Cannot find module '@capacitor/core'"
+### 10.8 Erreur : "Cannot find module '@capacitor/core'"
 ```bash
 npm install @capacitor/core
 npm run build
+npx cap sync android
+```
+
+### 10.9 Écran noir au lancement de l'APK
+```bash
+# Causes possibles :
+# 1. google-services.json manquant → télécharger depuis Firebase Console
+# 2. Les fichiers web ne sont pas compilés → npm run build
+# 3. Build Android incomplet → Android Studio: Build → Rebuild Project
+
+# Solutions :
+npm run build        # Recompiler le web
+npx cap sync android # Resync avec Android
+# Puis dans Android Studio : Build → Rebuild Project → Run
+```
+
+### 10.10 Erreur : "ADB devices not found"
+```bash
+# Le téléphone n'est pas en mode debug USB
+# Solutions :
+# 1. Sur le téléphone : Paramètres → À propos du téléphone
+# 2. Appuyer 7 fois sur "Version de compilation"
+# 3. Retour : Paramètres → Options pour développeurs
+# 4. Activer "Débogage USB"
+# 5. Brancher en USB et confirmer "Autoriser le débogage"
+
+# Vérifier :
+adb devices  # Doit lister votre téléphone
 ```
 
 ---
@@ -348,30 +544,49 @@ match /users/{userId} {
 Pour les impatients :
 
 ```bash
-# 1. Prérequis installés ? ✓
-# 2. Node + Android Studio + JDK ok ? ✓
+# ===== VÉRIFIER LES PRÉREQUIS =====
+# Ouvrir PowerShell (Admin) et exécuter :
+node --version       # Doit être v20.x.x ou plus
+npm --version        # Doit être 10.x.x ou plus
+java -version        # Doit être 21.x.x ou plus
+echo %ANDROID_HOME%  # Doit afficher le chemin du SDK
+adb --version        # Doit afficher "Android Debug Bridge"
 
-# 3. Clone/Copie du projet
+# Si une des commandes échoue → revoir la section 1 (PRÉREQUIS)
+
+# ===== CONFIGURATION =====
 cd mobile-signalement
 
-# 4. Fichier .env créé avec les clés Firebase ? ✓
-# 5. google-services.json en place ? ✓
+# Créer ou vérifier le fichier .env avec les clés Firebase
+# (voir section 3.2 du guide)
 
-# 6. Installation
-npm install
+# Télécharger google-services.json depuis Firebase Console
+# et le placer dans android/app/google-services.json
 
-# 7. Build web  
-npm run build
+# ===== INSTALLATION DES DÉPENDANCES =====
+npm install          # Installe les dépendances npm (~5-10 min)
+npm list react       # Vérifier que react est installé
 
-# 8. Sync Android
-npx cap sync android
+# ===== BUILD ET SYNCHRONISATION =====
+npm run build        # Compile le code React
+npx cap sync android # Synchronise avec Android
 
-# 9. Ouvrir et exécuter
-npx cap open android
-# → Dans Android Studio : Run → Run 'app'
+# ===== EXÉCUTION =====
+npx cap open android # Ouvre Android Studio
+# → Dans Android Studio : Build → Rebuild Project
+# → Run → Run 'app'
 
-# À l'attendre... ✨
+# À l'attendre... ✨ (la première exécution peut prendre 10-15 min)
 ```
+
+**Checklist avant de démarrer :**
+- [ ] Node.js 20+ installé
+- [ ] JDK 21+ installé
+- [ ] Android Studio installé avec SDK
+- [ ] ANDROID_HOME défini
+- [ ] JAVA_HOME défini
+- [ ] .env créé avec clés Firebase
+- [ ] google-services.json téléchargé
 
 ---
 
