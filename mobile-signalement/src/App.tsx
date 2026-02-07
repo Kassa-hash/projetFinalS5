@@ -1,12 +1,15 @@
 // Composant racine de l'application
 import { RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import router from './router';
 
 function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <NotificationProvider>
+        <RouterProvider router={router} />
+      </NotificationProvider>
     </AuthProvider>
   );
 }
