@@ -6,8 +6,10 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { useAuth } from './AuthContext';
 import {
   ecouterMesSignalements,
@@ -57,11 +59,28 @@ function saveNotifications(notifs: Notification[]) {
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { firebaseUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>(loadNotifications);
+  const notifIdCounter = useRef(1);
 
   // Persister les notifications dans localStorage
   useEffect(() => {
     saveNotifications(notifications);
   }, [notifications]);
+
+  // Demander la permission pour les notifications système Android
+  useEffect(() => {
+    (async () => {
+      try {
+        const perm = await LocalNotifications.checkPermissions();
+        console.log('🔔 Permissions notifications:', perm);
+        if (perm.display !== 'granted') {
+          const result = await LocalNotifications.requestPermissions();
+          console.log('🔔 Permission demandée:', result);
+        }
+      } catch (err) {
+        console.warn('⚠️ Erreur permissions notifications:', err);
+      }
+    })();
+  }, []);
 
   // Écouter les changements de statut en temps réel
   useEffect(() => {
@@ -77,30 +96,28 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         timestamp: change.timestamp,
       };
 
-      setNotifications((prev) => [newNotif, ...prev].slice(0, 50)); // garder 50 max
+      setNotifications((prev) => [newNotif, ...prev].slice(0, 50));
 
-      // Notification système (navigateur / Capacitor)
-      try {
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('📍 Signalement mis à jour', {
+      // Afficher une vraie notification système Android via Capacitor
+      const localId = notifIdCounter.current++;
+      LocalNotifications.schedule({
+        notifications: [
+          {
+            title: '📍 Signalement mis à jour',
             body: newNotif.message,
-            icon: '/favicon.ico',
-          });
-        }
-      } catch {
-        // Silencieux si non supporté
-      }
+            id: localId,
+            schedule: { at: new Date(Date.now() + 1000) },
+          },
+        ],
+      }).catch((err: unknown) => {
+        console.error('❌ Erreur notification locale:', err);
+      });
+
+      console.log('📬 Notification envoyée (ID:', localId, ')');
     });
 
     return () => unsubscribe();
   }, [firebaseUser]);
-
-  // Demander la permission pour les notifications système
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((prev) =>
