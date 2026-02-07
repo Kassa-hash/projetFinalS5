@@ -11,11 +11,22 @@ interface User {
   account_lockout: boolean
 }
 
+const STORAGE_KEYS = {
+  TOKEN: 'auth_token',
+  USER: 'auth_user',
+  SESSION_TIME: 'auth_session_time'
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem('token'))
+  // Restaurer depuis localStorage
+  const storedUser = localStorage.getItem(STORAGE_KEYS.USER)
+  const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
+  
+  const user = ref<User | null>(storedUser ? JSON.parse(storedUser) : null)
+  const token = ref<string | null>(storedToken)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const sessionRestored = ref(false)
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const userRole = computed(() => user.value?.role ?? 'visitor')
@@ -31,13 +42,14 @@ export const useAuthStore = defineStore('auth', () => {
       // Gérer les deux types de réponses (Firebase et Postgres)
       if (response.id_token) {
         token.value = response.id_token
-        localStorage.setItem('token', response.id_token)
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.id_token)
       } else if (response.token) {
         token.value = response.token
-        localStorage.setItem('token', response.token)
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.token)
       }
       
       user.value = useAuthStore().user
+      localStorage.setItem(STORAGE_KEYS.SESSION_TIME, Date.now().toString())
       
       // Si pas de token (fallback Postgres sans token), faire un login automatique
       if (!token.value && response.source === 'postgres') {
@@ -62,10 +74,16 @@ export const useAuthStore = defineStore('auth', () => {
       // Gérer les deux types de réponses (Firebase et Postgres)
       if (response.id_token) {
         token.value = response.id_token
-        localStorage.setItem('token', response.id_token)
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.id_token)
+      } else if (response.token) {
+        token.value = response.token
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.token)
       }
       
       user.value = response.user
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user))
+      localStorage.setItem(STORAGE_KEYS.SESSION_TIME, Date.now().toString())
+      
       return response
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Email ou mot de passe incorrect'
@@ -81,7 +99,9 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       user.value = null
       token.value = null
-      localStorage.removeItem('token')
+      localStorage.removeItem(STORAGE_KEYS.TOKEN)
+      localStorage.removeItem(STORAGE_KEYS.USER)
+      localStorage.removeItem(STORAGE_KEYS.SESSION_TIME)
     }
   }
 
@@ -89,9 +109,36 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
     try {
       user.value = await authService.getUser()
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user.value))
+      localStorage.setItem(STORAGE_KEYS.SESSION_TIME, Date.now().toString())
+    } catch (err: any) {
+      // Erreur 401 = token invalide ou session expirée
+      if (err.response?.status === 401) {
+        token.value = null
+        user.value = null
+        localStorage.removeItem(STORAGE_KEYS.TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.USER)
+        localStorage.removeItem(STORAGE_KEYS.SESSION_TIME)
+      }
+      throw err
+    }
+  }
+
+  const restoreSession = async () => {
+    if (!token.value) {
+      sessionRestored.value = true
+      return false
+    }
+
+    try {
+      await fetchUser()
+      sessionRestored.value = true
+      console.log('✅ Session restaurée')
+      return true
     } catch (err) {
-      token.value = null
-      localStorage.removeItem('token')
+      console.log('❌ Session expirée ou invalide')
+      sessionRestored.value = true
+      return false
     }
   }
 
@@ -104,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     loading,
     error,
+    sessionRestored,
     isAuthenticated,
     userRole,
     isManager,
@@ -112,6 +160,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     fetchUser,
+    restoreSession,
     clearError
   }
 })

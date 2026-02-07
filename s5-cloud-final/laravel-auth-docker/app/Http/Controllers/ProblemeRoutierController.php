@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProblemeRoutier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class ProblemeRoutierController extends Controller
 {
@@ -79,37 +80,72 @@ class ProblemeRoutierController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $probleme = ProblemeRoutier::findOrFail($id);
+        Log::info('UPDATE PROBLEME - ID reçu:', ['id' => $id, 'request_data' => $request->all()]);
 
-        $validator = Validator::make($request->all(), [
-            'titre' => 'sometimes|string|max:150',
-            'description' => 'sometimes|string',
-            'statut' => 'sometimes|in:nouveau,en_cours,termine',
-            'date_signalement' => 'sometimes|date',
-            'date_debut' => 'nullable|date',
-            'date_fin' => 'nullable|date',
-            'surface_m2' => 'sometimes|numeric|min:0',
-            'budget' => 'sometimes|numeric|min:0',
-            'entreprise' => 'nullable|string|max:150',
-            'latitude' => 'sometimes|numeric|between:-90,90',
-            'longitude' => 'sometimes|numeric|between:-180,180',
-            'type_probleme' => 'sometimes|in:nid_de_poule,fissure,affaissement,autre',
-            'type_route' => 'sometimes|in:pont,trottoir,route,piste_cyclable,autre'
-        ]);
+        try {
+            // Chercher le problème par ID
+            $probleme = ProblemeRoutier::findOrFail($id);
+            Log::info('PROBLEME TROUVÉ:', ['id_probleme' => $probleme->id_probleme, 'current_data' => $probleme->toArray()]);
 
-        if ($validator->fails()) {
+            // Validations
+            $validator = Validator::make($request->all(), [
+                'titre' => 'sometimes|string|max:150',
+                'description' => 'sometimes|string',
+                'statut' => 'sometimes|in:nouveau,en_cours,termine',
+                'date_signalement' => 'sometimes|date',
+                'date_debut' => 'nullable|date',
+                'date_fin' => 'nullable|date',
+                'surface_m2' => 'sometimes|numeric|min:0',
+                'budget' => 'sometimes|numeric|min:0',
+                'entreprise' => 'nullable|string|max:150',
+                'latitude' => 'sometimes|numeric|between:-90,90',
+                'longitude' => 'sometimes|numeric|between:-180,180',
+                'type_probleme' => 'sometimes|in:nid_de_poule,fissure,affaissement,autre',
+                'type_route' => 'sometimes|in:pont,trottoir,route,piste_cyclable,autre'
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('VALIDATION ÉCHOUÉE:', ['errors' => $validator->errors()]);
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
+            }
+
+            // Mettre à jour
+            $dataToUpdate = array_filter($request->all(), function($value) {
+                return $value !== null && $value !== '';
+            });
+
+            Log::info('DONNÉES À METTRE À JOUR:', $dataToUpdate);
+            
+            $probleme->update($dataToUpdate);
+            $probleme->refresh(); // Recharger depuis la base
+
+            Log::info('MISE À JOUR RÉUSSIE:', ['new_data' => $probleme->toArray()]);
+
             return response()->json([
-                'error' => 'Validation failed',
-                'messages' => $validator->errors()
-            ], 422);
+                'message' => 'Problème mis à jour avec succès',
+                'data' => $probleme
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error('PROBLÈME NON TROUVÉ - ID inexistant:', ['id' => $id]);
+            return response()->json([
+                'error' => 'Problème non trouvé',
+                'id_searched' => $id
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('ERREUR LORS DE LA MISE À JOUR:', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json([
+                'error' => 'Erreur serveur lors de la mise à jour',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        $probleme->update($request->all());
-
-        return response()->json([
-            'message' => 'Problème mis à jour avec succès',
-            'data' => $probleme
-        ]);
     }
 
     /**

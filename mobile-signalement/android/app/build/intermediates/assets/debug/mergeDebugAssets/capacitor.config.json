@@ -1,0 +1,18 @@
+{
+	"appId": "com.signalement.app",
+	"appName": "Signalement",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	},
+	"plugins": {
+		"StatusBar": {
+			"style": "dark",
+			"backgroundColor": "#1e40af"
+		},
+		"Keyboard": {
+			"resize": "body",
+			"resizeOnFullScreen": true
+		}
+	}
+}

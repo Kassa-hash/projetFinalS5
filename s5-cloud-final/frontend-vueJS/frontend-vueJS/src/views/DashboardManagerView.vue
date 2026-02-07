@@ -188,7 +188,7 @@
                       <select v-model="report.statut" @change="updateReportStatus(report)">
                         <option value="nouveau">Nouveau</option>
                         <option value="en_cours">En cours</option>
-                        <option value="terminé">Terminé</option>
+                        <option value="termine">Terminé</option>
                       </select>
                     </div>
 
@@ -397,6 +397,7 @@ const loadReportsData = async () => {
     // Mapper les données du backend vers le format attendu
     reportsData.value = problemes.map(p => ({
       id: p.id_probleme,
+      id_probleme: p.id_probleme,
       titre: p.titre,
       description: p.description,
       statut: p.statut,
@@ -405,6 +406,9 @@ const loadReportsData = async () => {
       entreprise: p.entreprise || '',
       type_probleme: p.type_probleme,
       type_route: p.type_route,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      firebase_id: p.firebase_id || null,
       date_signalement: p.date_signalement,
       date_debut: p.date_debut || '',
       date_fin: p.date_fin || ''
@@ -527,6 +531,25 @@ const updateReportStatus = (report: any) => {
 const saveReport = async (report: any) => {
   loadingReports.value = true
   try {
+    console.log('📝 [SAVE] Avant validation:', { report_id: report.id, report_id_probleme: report.id_probleme })
+    
+    // Validations des champs obligatoires
+    if (!report.titre?.trim()) {
+      formMessage.value = { type: 'error', text: 'Le titre est obligatoire' }
+      loadingReports.value = false
+      return
+    }
+    if (!report.statut) {
+      formMessage.value = { type: 'error', text: 'Le statut est obligatoire' }
+      loadingReports.value = false
+      return
+    }
+    if (!report.latitude || !report.longitude) {
+      formMessage.value = { type: 'error', text: 'Les coordonnées GPS (latitude/longitude) sont requises' }
+      loadingReports.value = false
+      return
+    }
+
     // Préparer les données pour l'API
     const updateData: Partial<ProblemeRoutier> = {
       titre: report.titre,
@@ -537,13 +560,20 @@ const saveReport = async (report: any) => {
       entreprise: report.entreprise,
       type_probleme: report.type_probleme,
       type_route: report.type_route,
+      latitude: report.latitude,
+      longitude: report.longitude,
       date_signalement: report.date_signalement,
       date_debut: report.date_debut || null,
       date_fin: report.date_fin || null
     }
 
-    await managerService.updateProbleme(report.id, updateData)
+    const reportId = report.id || report.id_probleme
+    const firebaseId = report.firebase_id || undefined
+    console.log('📤 [SAVE] Envoi au backend:', { id: reportId, firebaseId, data: updateData })
     
+    await managerService.updateProbleme(reportId, updateData, firebaseId)
+    
+    console.log('✅ [SAVE] Succès!')
     formMessage.value = { type: 'success', text: 'Signalement mis à jour avec succès!' }
     
     // Recharger les données
@@ -554,9 +584,12 @@ const saveReport = async (report: any) => {
       expandedReportId.value = null
     }, 2000)
   } catch (error: any) {
+    console.log('❌ [SAVE ERROR]', error)
+    const errorDetails = error.response?.data?.errors || error.response?.data?.message || 'Erreur lors de la mise à jour du signalement'
+    console.error('Detailed error:', errorDetails)
     formMessage.value = { 
       type: 'error', 
-      text: error.response?.data?.message || 'Erreur lors de la mise à jour du signalement' 
+      text: typeof errorDetails === 'object' ? JSON.stringify(errorDetails) : errorDetails
     }
     setTimeout(() => {
       formMessage.value = null

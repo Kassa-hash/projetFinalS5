@@ -1,0 +1,3 @@
+com.signalement.app.test
+style WhiteBackgroundDialogTheme
+style WhiteBackgroundTheme

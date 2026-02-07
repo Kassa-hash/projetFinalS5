@@ -64,9 +64,9 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Récupérer l'utilisateur si le token existe
-  if (authStore.token && !authStore.user) {
-    await authStore.fetchUser()
+  // Restaurer la session une seule fois au démarrage
+  if (!authStore.sessionRestored) {
+    await authStore.restoreSession()
   }
 
   // Vérifier les routes nécessitant l'authentification
