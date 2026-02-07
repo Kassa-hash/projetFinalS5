@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import { useRef } from 'react';
 import { ajouterSignalement, type NouveauSignalement } from '../services/syncService';
 import type { TypeProbleme, TypeRoute } from '../types';
+import { takePhoto, pickPhoto, prepareMultiplePhotos } from '../services/photoService';
 import '../styles/AddSignalement.css';
 
 const DEFAULT_CENTER: L.LatLngTuple = [-18.8792, 47.5079];
@@ -48,6 +49,11 @@ export default function AddSignalementPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  
+  // États pour la gestion des photos
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [photoBase64List, setPhotoBase64List] = useState<string[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
 
   // Initialiser la mini-carte pour choisir la position
   useEffect(() => {
@@ -92,6 +98,30 @@ export default function AddSignalementPage() {
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Capturer une photo
+  const handleTakePhoto = async () => {
+    const base64 = await takePhoto();
+    if (base64) {
+      setPhotoPreviews([...photoPreviews, base64]);
+      setPhotoBase64List([...photoBase64List, base64]);
+    }
+  };
+
+  // Sélectionner une photo depuis la galerie
+  const handlePickPhoto = async () => {
+    const base64 = await pickPhoto();
+    if (base64) {
+      setPhotoPreviews([...photoPreviews, base64]);
+      setPhotoBase64List([...photoBase64List, base64]);
+    }
+  };
+
+  // Supprimer une photo
+  const handleRemovePhoto = (index: number) => {
+    setPhotoPreviews(photoPreviews.filter((_, i) => i !== index));
+    setPhotoBase64List(photoBase64List.filter((_, i) => i !== index));
+  };
 
   // Géolocaliser pour positionner le marqueur
   const locateMe = async () => {
@@ -143,6 +173,21 @@ export default function AddSignalementPage() {
 
     try {
       setIsSubmitting(true);
+      setIsUploadingPhotos(true);
+
+      // Compresser toutes les photos EN PARALLÈLE (beaucoup plus rapide)
+      let compressedPhotos: string[] = [];
+      if (photoBase64List.length > 0) {
+        console.log(`📸 Compression parallèle de ${photoBase64List.length} photo(s)...`);
+        const startTime = performance.now();
+        compressedPhotos = await prepareMultiplePhotos(photoBase64List);
+        const duration = performance.now() - startTime;
+        console.log(`✅ Compression terminée en ${duration.toFixed(1)}ms`);
+      }
+
+      setIsUploadingPhotos(false);
+
+      // Créer le signalement avec les photos en base64
       const data: NouveauSignalement = {
         titre: titre.trim(),
         description: description.trim(),
@@ -151,6 +196,7 @@ export default function AddSignalementPage() {
         latitude,
         longitude,
         adresse: adresse.trim(),
+        photoUrls: compressedPhotos.length > 0 ? compressedPhotos : undefined,
       };
       await ajouterSignalement(data);
       setSuccess(true);
@@ -161,6 +207,7 @@ export default function AddSignalementPage() {
       setError(msg);
     } finally {
       setIsSubmitting(false);
+      setIsUploadingPhotos(false);
     }
   };
 
@@ -223,7 +270,7 @@ export default function AddSignalementPage() {
             />
           </div>
 
-          {/* Type de problème */}
+          {/* Type de route */}
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="typeProbleme">Type de problème</label>
@@ -256,6 +303,51 @@ export default function AddSignalementPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Galerie de photos */}
+          <div className="form-group">
+            <label>📸 Photos (optionnel - {photoPreviews.length} photo{photoPreviews.length !== 1 ? 's' : ''})</label>
+            
+            {/* Boutons pour ajouter des photos */}
+            <div className="photo-buttons">
+              <button
+                type="button"
+                onClick={handleTakePhoto}
+                className="btn btn-secondary btn-photo"
+                disabled={isSubmitting || isUploadingPhotos}
+              >
+                📷 Prendre une photo
+              </button>
+              <button
+                type="button"
+                onClick={handlePickPhoto}
+                className="btn btn-secondary btn-photo"
+                disabled={isSubmitting || isUploadingPhotos}
+              >
+                🖼️ Galerie
+              </button>
+            </div>
+
+            {/* Affichage des previews */}
+            {photoPreviews.length > 0 && (
+              <div className="photo-gallery">
+                {photoPreviews.map((preview, idx) => (
+                  <div key={idx} className="photo-item">
+                    <img src={preview} alt={`Photo ${idx + 1}`} className="photo-preview" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(idx)}
+                      className="btn-remove-photo"
+                      disabled={isSubmitting || isUploadingPhotos}
+                      title="Supprimer cette photo"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Adresse (optionnel) */}
@@ -296,13 +388,18 @@ export default function AddSignalementPage() {
             className="btn btn-primary btn-submit"
             disabled={isSubmitting || !titre || !description}
           >
-            {isSubmitting ? (
+            {isUploadingPhotos ? (
+              <span className="btn-loading">
+                <span className="spinner-small" />
+                Upload photos...
+              </span>
+            ) : isSubmitting ? (
               <span className="btn-loading">
                 <span className="spinner-small" />
                 Envoi en cours...
               </span>
             ) : (
-              '🔥 Envoyer sur Firebase'
+              `🔥 Envoyer sur Firebase${photoPreviews.length > 0 ? ` (+ ${photoPreviews.length} photo${photoPreviews.length !== 1 ? 's' : ''})` : ''}`
             )}
           </button>
         </form>

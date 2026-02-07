@@ -197,6 +197,18 @@ export default function MapPage() {
       const icon = createColoredIcon(STATUT_COLORS[probleme.statut]);
       const marker = L.marker([probleme.latitude, probleme.longitude], { icon });
 
+      // Au clic sur le marqueur, rediriger vers la page de détails
+      // Passer firebase_id si disponible, sinon id numérique
+      const signalementId = probleme.firebase_id || probleme.id || '';
+      marker.on('click', () => {
+        if (signalementId) {
+          navigate(`/signalements/${signalementId}`);
+        } else {
+          console.error('❌ ID du signalement manquant');
+        }
+      });
+
+      // Afficher un popup au survol
       marker.bindPopup(`
         <div class="popup-content">
           <h3>${probleme.titre || 'Sans titre'}</h3>
@@ -207,6 +219,7 @@ export default function MapPage() {
           </div>
           <p class="popup-date">📅 ${new Date(probleme.date_signalement).toLocaleDateString('fr-FR')}</p>
           ${probleme.adresse ? `<p class="popup-address">📍 ${probleme.adresse}</p>` : ''}
+          <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #0066cc; cursor: pointer;">👉 Cliquez pour voir les détails</p>
         </div>
       `);
 

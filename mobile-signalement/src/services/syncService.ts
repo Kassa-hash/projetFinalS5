@@ -30,6 +30,7 @@ export async function fetchSignalementsFirebase(): Promise<Probleme[]> {
   const signalements: Probleme[] = [];
   querySnapshot.forEach((doc) => {
     const data = doc.data();
+    const photoUrls = data.photoUrls || data.photos || [];
     signalements.push({
       firebase_id: doc.id,
       titre: data.titre || 'Sans titre',
@@ -42,6 +43,7 @@ export async function fetchSignalementsFirebase(): Promise<Probleme[]> {
       adresse: data.adresse || '',
       date_signalement: convertDate(data.date_signalement),
       date_resolution: data.date_fin ? convertDate(data.date_fin) : undefined,
+      photoUrls: Array.isArray(photoUrls) ? photoUrls : [],
     });
   });
 
@@ -151,6 +153,7 @@ export interface NouveauSignalement {
   surface_m2?: number;
   budget?: number;
   entreprise?: string;
+  photoUrls?: string[];
 }
 
 /**
@@ -172,6 +175,8 @@ export async function ajouterSignalement(
     surface_m2: data.surface_m2 || 0,
     budget: data.budget || 0,
     entreprise: data.entreprise || '',
+    photos: data.photoUrls || [],
+    photoUrls: data.photoUrls || [],
     date_signalement: serverTimestamp(),
     derniere_maj: serverTimestamp(),
     synced: false,
