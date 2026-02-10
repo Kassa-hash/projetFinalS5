@@ -154,6 +154,7 @@ import { useProblemesStore } from '@/stores/problemes';
 import { useSynchronisationStore } from '@/stores/synchronisation';
 import SyncButton from '@/components/SyncButton.vue';
 import type { ProblemeRoutier } from '@/types/probleme';
+import api from '@/services/api';
 
 const problemesStore = useProblemesStore();
 const { problemes, stats, loading } = storeToRefs(problemesStore);
@@ -277,6 +278,9 @@ async function loadData() {
 
 
 
+// Cache pour les photos chargées
+const photosCache = new Map<number, any[]>();
+
 function addMarkers() {
   if (!map) {
     console.warn('⚠️ Carte non initialisée, impossible d\'ajouter les markers');
@@ -311,7 +315,9 @@ function addMarkers() {
         el.style.cursor = 'pointer';
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
 
-        // Créer le popup avec tous les champs
+        // Créer le popup avec tous les champs et photos
+        let photosHTML = '<div class="popup-photos-section" style="margin-top: 12px;"><strong>Photos:</strong><div class="photos-gallery" id="photos-' + probleme.id_probleme + '" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;"><span style="font-size: 12px; color: #999;">Chargement...</span></div></div>';
+        
         const popup = new maplibregl.Popup({
           offset: 25,
           closeButton: true,
@@ -328,6 +334,7 @@ function addMarkers() {
             <p><strong>Date signalement:</strong> ${formatDate(probleme.date_signalement)}</p>
             ${probleme.date_debut ? `<p><strong>Date début:</strong> ${formatDate(probleme.date_debut)}</p>` : ''}
             ${probleme.date_fin ? `<p><strong>Date fin:</strong> ${formatDate(probleme.date_fin)}</p>` : ''}
+            ${photosHTML}
           </div>
         `);
 
@@ -335,6 +342,11 @@ function addMarkers() {
           .setLngLat([probleme.longitude, probleme.latitude])
           .setPopup(popup)
           .addTo(map!);
+
+        // Charger les photos quand le popup s'ouvre
+        popup.on('open', () => {
+          displayPhotos(probleme.id_probleme);
+        });
 
         markers.push(marker);
         markersAdded++;
@@ -350,10 +362,96 @@ function addMarkers() {
       addNotification('warning', 'Markers incomplets', `${markersSkipped} signalement(s) sans coordonnées GPS valides`, 5000);
     }
 
+    // Pré-charger toutes les photos pour une meilleure performance
+    preloadAllPhotos();
+
   } catch (error: any) {
     console.error('❌ Erreur lors de l\'ajout des markers:', error);
     addNotification('error', 'Erreur markers', error.message);
   }
+}
+
+// Pré-charger toutes les photos
+async function preloadAllPhotos() {
+  for (const probleme of problemes.value) {
+    if (!photosCache.has(probleme.id_probleme)) {
+      loadPhotosForProbleme(probleme.id_probleme);
+    }
+  }
+}
+
+// Afficher les photos du cache ou charger si nécessaire
+async function displayPhotos(id_probleme: number) {
+  const container = document.getElementById(`photos-${id_probleme}`);
+  if (!container) return;
+
+  // Si en cache, afficher immédiatement
+  if (photosCache.has(id_probleme)) {
+    renderPhotos(id_probleme, photosCache.get(id_probleme)!);
+    return;
+  }
+
+  // Sinon charger et afficher
+  try {
+    const response = await api.get(`/problemes/${id_probleme}/photos`);
+    const photos = response.data;
+    photosCache.set(id_probleme, photos);
+    renderPhotos(id_probleme, photos);
+  } catch (error: any) {
+    console.error(`Erreur chargement photos:`, error);
+    container.innerHTML = '<span style="font-size: 12px; color: #999;">Erreur chargement</span>';
+  }
+}
+
+// Charger les photos d'un problème en arrière-plan
+async function loadPhotosForProbleme(id_probleme: number) {
+  try {
+    const response = await api.get(`/problemes/${id_probleme}/photos`);
+    const photos = response.data;
+    photosCache.set(id_probleme, photos);
+  } catch (error: any) {
+    console.error(`Erreur pré-chargement photos pour ${id_probleme}:`, error);
+  }
+}
+
+// Rendu des photos dans le conteneur
+function renderPhotos(id_probleme: number, photos: any[]) {
+  const container = document.getElementById(`photos-${id_probleme}`);
+  if (!container) return;
+
+  if (photos.length === 0) {
+    container.innerHTML = '<span style="font-size: 12px; color: #999;">Aucune photo</span>';
+    return;
+  }
+
+  let photosHTML = '';
+  photos.forEach((photo: any) => {
+    photosHTML += `
+      <div class="photo-thumbnail" style="position: relative;">
+        <img src="${photo.url}" alt="${photo.nom_fichier}" 
+             style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #ddd;"
+             title="${photo.description || photo.nom_fichier}"
+             onclick="window.open('${photo.url}', '_blank')">
+        <div class="photo-hover-info" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 4px; font-size: 11px; border-radius: 0 0 4px 4px; opacity: 0; transition: opacity 0.3s; pointer-events: none;">
+          ${photo.description || 'Photo'}
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = photosHTML;
+  
+  // Ajouter hover effect
+  container.querySelectorAll('.photo-thumbnail').forEach((el: any) => {
+    el.addEventListener('mouseenter', () => {
+      const info = el.querySelector('.photo-hover-info');
+      if (info) info.style.opacity = '1';
+    });
+    el.addEventListener('mouseleave', () => {
+      const info = el.querySelector('.photo-hover-info');
+      if (info) info.style.opacity = '0';
+    });
+  });
 }
 
 // Gérer la fin de synchronisation

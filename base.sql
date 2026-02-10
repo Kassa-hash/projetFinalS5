@@ -51,22 +51,7 @@ CREATE TABLE entreprise (
 );
 
 -- =========================
--- 5. SIGNALEMENT
--- =========================
-CREATE TABLE signalement (
-    id SERIAL PRIMARY KEY,
-    latitude DECIMAL(10,8) NOT NULL,
-    longitude DECIMAL(11,8) NOT NULL,
-    quartier VARCHAR(100),
-    rue VARCHAR(150),
-    date_signalement DATE NOT NULL,
-    created_by INT REFERENCES utilisateur(id),
-    surface_m2 DECIMAL(10,2) NOT NULL,
-    budget_prevu DECIMAL(12,2),
-    budget_reel DECIMAL(12,2),
-    entreprise_id INT REFERENCES entreprise(id),
-    created_at TIMESTAMP DEFAULT now()
-);
+
 
 -- =========================
 
