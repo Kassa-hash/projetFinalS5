@@ -29,6 +29,19 @@
   margin: 0;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.data-source {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -52,6 +65,40 @@
 
 .btn-logout:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+/* Boutons header icônes */
+.btn-header-icon {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.btn-header-icon:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* Conteneur de la carte */
@@ -362,4 +409,33 @@
   font-size: 0.8rem;
   color: #6b7280;
   margin: 0.25rem 0 0;
+}
+
+/* ===== Bouton flottant Ajouter ===== */
+.fab-add-signalement {
+  position: absolute;
+  bottom: 2rem;
+  right: 1.2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 300;
+  border: none;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  /* safe area */
+  bottom: max(2rem, calc(env(safe-area-inset-bottom) + 1rem));
+}
+
+.fab-add-signalement:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
 }

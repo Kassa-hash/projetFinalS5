@@ -1,9 +1,11 @@
 // Page de la carte Leaflet avec géolocalisation et marqueurs
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
-import { getProblemes } from '../services/problemesService';
+import { useNotifications } from '../contexts/NotificationContext';
+import { recupererSignalements } from '../services/syncService';
 import type { Probleme, StatutProbleme, TypeProbleme } from '../types';
 import '../styles/Map.css';
 
@@ -65,6 +67,7 @@ function createColoredIcon(color: string): L.DivIcon {
 }
 
 export default function MapPage() {
+  const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
@@ -72,12 +75,14 @@ export default function MapPage() {
 
   const [problemes, setProblemes] = useState<Probleme[]>([]);
   const [loadingProblemes, setLoadingProblemes] = useState(false);
+  const [dataSource, setDataSource] = useState<string>('');
   const [geoError, setGeoError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatut, setFilterStatut] = useState<StatutProbleme | 'tous'>('tous');
 
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
+  const { unreadCount } = useNotifications();
 
   // Initialiser la carte
   useEffect(() => {
@@ -102,24 +107,70 @@ export default function MapPage() {
     const markersLayer = L.layerGroup().addTo(map);
     markersLayerRef.current = markersLayer;
 
+    // Appui prolongé → naviguer vers ajout signalement avec coordonnées
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    let longPressLatLng: L.LatLng | null = null;
+
+    map.on('mousedown', (e: L.LeafletMouseEvent) => {
+      longPressLatLng = e.latlng;
+      longPressTimer = setTimeout(() => {
+        if (longPressLatLng) {
+          navigate('/add', {
+            state: { lat: longPressLatLng.lat, lng: longPressLatLng.lng },
+          });
+        }
+      }, 600);
+    });
+
+    map.on('mouseup mousemove dragstart zoomstart', () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    });
+
+    // Support tactile natif (touchstart / touchend)
+    const container = map.getContainer();
+    let touchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    container.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const point = map.containerPointToLatLng(L.point(touch.clientX - container.getBoundingClientRect().left, touch.clientY - container.getBoundingClientRect().top));
+        touchTimer = setTimeout(() => {
+          navigate('/add', { state: { lat: point.lat, lng: point.lng } });
+        }, 600);
+      }
+    }, { passive: true });
+
+    container.addEventListener('touchend', () => {
+      if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    });
+    container.addEventListener('touchmove', () => {
+      if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    });
+
     mapInstanceRef.current = map;
 
     // Cleanup
     return () => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      if (touchTimer) clearTimeout(touchTimer);
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // Charger les problèmes
+  // Charger les problèmes (Firebase → PostgreSQL → cache local)
   const loadProblemes = useCallback(async () => {
     try {
       setLoadingProblemes(true);
-      const data = await getProblemes();
+      const { data, source } = await recupererSignalements();
       setProblemes(data);
+      setDataSource(source);
+      console.log(`📊 ${data.length} signalements chargés depuis ${source}`);
     } catch (err) {
       console.warn('Impossible de charger les problèmes:', err);
-      // En mode mobile/offline, on peut ne pas avoir accès à l'API
     } finally {
       setLoadingProblemes(false);
     }
@@ -237,9 +288,29 @@ export default function MapPage() {
       <header className="map-header">
         <div className="header-left">
           <h1>📍 Signalement</h1>
+          {dataSource && (
+            <span className="data-source">
+              {dataSource === 'firebase' ? '🔥' : dataSource === 'postgres' ? '🗄️' : '💾'}{' '}
+              {problemes.length}
+            </span>
+          )}
         </div>
         <div className="header-right">
-          <span className="user-name">{user?.name}</span>
+          <button
+            onClick={() => navigate('/mes-signalements')}
+            className="btn-header-icon"
+            title="Mes signalements"
+          >
+            📋
+          </button>
+          <button
+            onClick={() => navigate('/mes-signalements')}
+            className="btn-header-icon btn-notif"
+            title="Notifications"
+          >
+            🔔
+            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+          </button>
           <button onClick={logout} className="btn-logout" title="Déconnexion">
             🚪
           </button>
@@ -330,6 +401,15 @@ export default function MapPage() {
           <button onClick={() => setGeoError(null)}>×</button>
         </div>
       )}
+
+      {/* Bouton flottant pour ajouter un signalement */}
+      <button
+        className="fab-add-signalement"
+        onClick={() => navigate('/add')}
+        title="Ajouter un signalement"
+      >
+        +
+      </button>
     </div>
   );
 }
