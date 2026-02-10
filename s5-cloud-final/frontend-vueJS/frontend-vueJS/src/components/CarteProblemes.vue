@@ -283,8 +283,8 @@ const photosCache = new Map<number, any[]>();
 
 function addMarkers() {
   if (!map) {
-    console.warn('⚠️ Carte non initialisée, impossible d\'ajouter les markers');
-    return;
+    console.warn('⚠️ Carte non initialisée, impossible d\'ajouter les markers')
+    return
   }
 
   try {
@@ -297,12 +297,12 @@ function addMarkers() {
 
     problemes.value.forEach((probleme: ProblemeRoutier) => {
       if (!probleme.latitude || !probleme.longitude) {
-        markersSkipped++;
-        return;
+        markersSkipped++
+        return
       }
 
       try {
-        const color = getStatutColor(probleme.statut);
+        const color = getStatutColor(probleme.statut)
 
         // Créer l'élément du marker
         const el = document.createElement('div');
@@ -326,6 +326,7 @@ function addMarkers() {
           <div class="popup-content">
             <h6><strong>${probleme.titre || 'Sans titre'}</strong></h6>
             <p><strong>Statut:</strong> <span class="badge ${getStatutBadge(probleme.statut)}">${formatStatut(probleme.statut)}</span></p>
+            ${probleme.niveau ? `<p><strong>Criticité:</strong> <span class="badge ${getNiveauClass(probleme.niveau)}">📊 Niveau ${probleme.niveau}/10</span></p>` : ''}
             <p><strong>Type problème:</strong> ${formatType(probleme.type_probleme)}</p>
             <p><strong>Type route:</strong> ${formatTypeRoute(probleme.type_route)}</p>
             <p><strong>Surface:</strong> ${formatNumber(probleme.surface_m2)} m²</p>
@@ -336,7 +337,7 @@ function addMarkers() {
             ${probleme.date_fin ? `<p><strong>Date fin:</strong> ${formatDate(probleme.date_fin)}</p>` : ''}
             ${photosHTML}
           </div>
-        `);
+        `)
 
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([probleme.longitude, probleme.latitude])
@@ -351,10 +352,10 @@ function addMarkers() {
         markers.push(marker);
         markersAdded++;
       } catch (error: any) {
-        console.error(`❌ Erreur ajout marker pour ${probleme.titre}:`, error);
-        markersSkipped++;
+        console.error(`❌ Erreur ajout marker pour ${probleme.titre}:`, error)
+        markersSkipped++
       }
-    });
+    })
 
     console.log(`✅ ${markersAdded} markers ajoutés, ${markersSkipped} ignorés`);
     
@@ -366,8 +367,8 @@ function addMarkers() {
     preloadAllPhotos();
 
   } catch (error: any) {
-    console.error('❌ Erreur lors de l\'ajout des markers:', error);
-    addNotification('error', 'Erreur markers', error.message);
+    console.error('❌ Erreur lors de l\'ajout des markers:', error)
+    addNotification('error', 'Erreur markers', error.message)
   }
 }
 
@@ -565,6 +566,13 @@ function formatCurrency(amount: number): string {
   } catch {
     return String(amount) + ' Ar';
   }
+}
+
+function getNiveauClass(niveau: number): string {
+  if (niveau <= 3) return 'badge-success'
+  if (niveau <= 6) return 'badge-warning'
+  if (niveau <= 8) return 'badge-danger'
+  return 'badge-critical'
 }
 </script>
 
@@ -1087,6 +1095,17 @@ function formatCurrency(amount: number): string {
 :deep(.badge-warning) { background: #ffc107; color: #333; }
 :deep(.badge-success) { background: #28a745; color: #fff; }
 :deep(.badge-secondary) { background: #6c757d; color: #fff; }
+
+:deep(.badge-critical) { 
+  background: #dc3545; 
+  color: #fff; 
+  animation: pulse-badge 1.5s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
 
 /* =========================
    BOUTON FERMETURE POPUP

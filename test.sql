@@ -13,7 +13,8 @@ INSERT INTO probleme_routier (
     latitude, 
     longitude, 
     type_probleme, 
-    type_route
+    type_route,
+    niveau
 ) VALUES 
 
 (
@@ -29,7 +30,8 @@ INSERT INTO probleme_routier (
     -18.9323,
     47.5512,
     'autre',
-    'piste_cyclable'
+    'piste_cyclable',
+    3
 ),
 
 
@@ -47,8 +49,9 @@ INSERT INTO probleme_routier (
     -18.9167,
     47.5265,
     'fissure',
-    'route'
-);
+    'route',
+    7
+),
 
 -- Zone 67 ha
 (
@@ -64,7 +67,8 @@ INSERT INTO probleme_routier (
     -18.9189,
     47.5342,
     'affaissement',
-    'route'
+    'route',
+    8
 ),
 
 -- Trottoir Analakely
@@ -81,7 +85,8 @@ INSERT INTO probleme_routier (
     -18.9145,
     47.5215,
     'autre',
-    'trottoir'
+    'trottoir',
+    5
 ),
 
 -- Zone Andohalo
@@ -98,7 +103,8 @@ INSERT INTO probleme_routier (
     -18.9078,
     47.5289,
     'nid_de_poule',
-    'route'
+    'route',
+    6
 ),
 
 -- Piste cyclable Anosy
@@ -115,7 +121,8 @@ INSERT INTO probleme_routier (
     -18.9232,
     47.5178,
     'fissure',
-    'piste_cyclable'
+    'piste_cyclable',
+    4
 ),
 
 -- Zone Ambohijatovo
@@ -132,7 +139,8 @@ INSERT INTO probleme_routier (
     -18.9195,
     47.5267,
     'autre',
-    'route'
+    'route',
+    9
 ),
 
 -- Pont Anosy
@@ -149,7 +157,8 @@ INSERT INTO probleme_routier (
     -18.9245,
     47.5189,
     'fissure',
-    'pont'
+    'pont',
+    10
 ),
 
 -- Zone Isoraka
@@ -166,7 +175,8 @@ INSERT INTO probleme_routier (
     -18.9156,
     47.5301,
     'nid_de_poule',
-    'route'
+    'route',
+    2
 ),
 
 -- Zone Tsaralalana
@@ -183,7 +193,8 @@ INSERT INTO probleme_routier (
     -18.9123,
     47.5243,
     'affaissement',
-    'route'
+    'route',
+    8
 ),
 
 -- Trottoir Ambohijatovo
@@ -200,7 +211,8 @@ INSERT INTO probleme_routier (
     -18.9201,
     47.5278,
     'autre',
-    'trottoir'
+    'trottoir',
+    4
 ),
 
 -- Zone Mahamasina
@@ -217,7 +229,8 @@ INSERT INTO probleme_routier (
     -18.9089,
     47.5312,
     'nid_de_poule',
-    'route'
+    'route',
+    6
 ),
 
 -- Zone Antanimena
@@ -234,11 +247,9 @@ INSERT INTO probleme_routier (
     -18.9267,
     47.5423,
     'fissure',
-    'route'
+    'route',
+    9
 ),
-
--- Piste cyclable Andohatapenaka
-
 
 -- Zone Analakely
 (
@@ -254,7 +265,8 @@ INSERT INTO probleme_routier (
     -18.9134,
     47.5228,
     'nid_de_poule',
-    'route'
+    'route',
+    5
 ),
 
 -- Zone Ampefiloha
@@ -271,5 +283,6 @@ INSERT INTO probleme_routier (
     -18.9101,
     47.5378,
     'affaissement',
-    'route'
+    'route',
+    7
 );

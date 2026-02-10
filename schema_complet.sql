@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS probleme_routier (
     longitude NUMERIC(10, 6),
     type_probleme ENUM('nid_de_poule', 'fissure', 'affaissement', 'autre'),
     type_route ENUM('pont', 'trottoir', 'route', 'piste_cyclable', 'autre'),
-    firebase_id VARCHAR(255)
+    firebase_id VARCHAR(255),
+    niveau INTEGER CHECK (niveau >= 1 AND niveau <= 10)  -- Nouveau champ criticité
 );
 
 -- INDEX: probleme_routier (optimisation des requêtes)

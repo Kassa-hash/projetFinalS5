@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\UnlockAccountController;
 use App\Http\Controllers\Api\UserManagementController;
 use App\Http\Controllers\FirebaseAuthController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\PrixParM2Controller;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProblemeRoutierController;
 
@@ -86,4 +87,13 @@ Route::prefix('problemes')->group(function () {
     Route::post('/{id_probleme}/photos', [PhotoController::class, 'store']);
     Route::put('/photos/{id}', [PhotoController::class, 'update']);
     Route::delete('/photos/{id}', [PhotoController::class, 'destroy']);
+});
+
+// Routes pour la gestion des prix par m²
+Route::prefix('prix-par-m2')->group(function () {
+    Route::get('/', [PrixParM2Controller::class, 'index']); // Liste tous les prix actifs
+    Route::post('/get-prix', [PrixParM2Controller::class, 'getPrix']); // Récupérer prix pour type_probleme + type_route
+    Route::post('/', [PrixParM2Controller::class, 'store']); // Créer un nouveau prix
+    Route::put('/{id}', [PrixParM2Controller::class, 'update']); // Modifier un prix
+    Route::delete('/{id}', [PrixParM2Controller::class, 'destroy']); // Désactiver un prix
 });

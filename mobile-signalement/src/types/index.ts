@@ -21,6 +21,7 @@ export interface Probleme {
   user_id?: number;
   photos?: Photo[];
   photoUrls?: string[];  // Photos en base64 depuis Firestore
+  niveau?: number | null;  // ✅ AJOUTER: Champ criticité (1-10)
 }
 
 export interface Photo {

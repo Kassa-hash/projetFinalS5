@@ -1,6 +1,7 @@
 // src/firebase/config.js
 import { initializeApp } from 'firebase/app'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import { getFirestore, connectFirestoreEmulator, initializeFirestore } from 'firebase/firestore'  // ✅ Ajouter initializeFirestore
+import { getAuth } from 'firebase/auth'  
 
 // Configuration Firebase depuis les variables d'environnement
 const firebaseConfig = {
@@ -46,14 +47,22 @@ try {
   throw error
 }
 
-// Initialiser Firestore
+// Initialiser Firestore avec configuration personnalisée
 let db
+let auth
 try {
-  db = getFirestore(app)
+  // ✅ Initialiser Firestore avec options de configuration
+  db = initializeFirestore(app, {
+    // En production, garder les paramètres par défaut
+    // En développement, vous pouvez désactiver persistance si souhaité
+    experimentalForceLongPolling: import.meta.env.DEV,  // ✅ Forcer long-polling au lieu de WebSockets
+  })
+  
+  auth = getAuth(app)
   console.log('✅ Firestore initialisé avec succès')
+  console.log('✅ Firebase Auth initialisé')
   
   // Optionnel: Utiliser l'émulateur Firestore en développement
-  // Décommentez ces lignes si vous utilisez l'émulateur Firebase
   // if (import.meta.env.DEV) {
   //   connectFirestoreEmulator(db, 'localhost', 8080)
   //   console.log('🔧 Firestore Emulator connecté')
@@ -64,5 +73,4 @@ try {
   throw error
 }
 
-// Exporter la base de données
-export { db, app }
+export { db, app, auth }

@@ -31,6 +31,7 @@ export async function fetchSignalementsFirebase(): Promise<Probleme[]> {
   querySnapshot.forEach((doc) => {
     const data = doc.data();
     const photoUrls = data.photoUrls || data.photos || [];
+    const niveau = data.niveau ? Math.max(1, Math.min(10, parseInt(String(data.niveau)))) : null  // ✅ AJOUTER: Extraire et valider
     signalements.push({
       firebase_id: doc.id,
       titre: data.titre || 'Sans titre',
@@ -44,6 +45,7 @@ export async function fetchSignalementsFirebase(): Promise<Probleme[]> {
       date_signalement: convertDate(data.date_signalement),
       date_resolution: data.date_fin ? convertDate(data.date_fin) : undefined,
       photoUrls: Array.isArray(photoUrls) ? photoUrls : [],
+      niveau: niveau  // ✅ AJOUTER: Inclure niveau
     });
   });
 
@@ -154,6 +156,7 @@ export interface NouveauSignalement {
   budget?: number;
   entreprise?: string;
   photoUrls?: string[];
+  niveau?: number;  // Nouveau champ criticité
 }
 
 /**
@@ -163,6 +166,13 @@ export async function ajouterSignalement(
   data: NouveauSignalement
 ): Promise<string> {
   const signalementsRef = collection(db, 'signalements');
+  
+  // ✅ S'assurer que niveau est validé
+  let niveau = null
+  if (data.niveau) {
+    niveau = Math.max(1, Math.min(10, parseInt(String(data.niveau))))
+  }
+  
   const docRef = await addDoc(signalementsRef, {
     titre: data.titre,
     description: data.description,
@@ -177,6 +187,7 @@ export async function ajouterSignalement(
     entreprise: data.entreprise || '',
     photos: data.photoUrls || [],
     photoUrls: data.photoUrls || [],
+    niveau: niveau,  // ✅ Inclure niveau validé
     date_signalement: serverTimestamp(),
     derniere_maj: serverTimestamp(),
     synced: false,

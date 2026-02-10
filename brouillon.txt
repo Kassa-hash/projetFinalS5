@@ -13,3 +13,9 @@ Synchronisation réussie!
 
     C:\Users\admin\Documents\GitHub\projetFinalS5\s5-cloud-final\frontend-vueJS\photos\media-literacy-for-all-3-600x399.png
     s5-cloud-final\frontend-vueJS\frontend-vueJS\photos\media-literacy-for-all-3-600x399.png
+
+
+UPDATE users
+SET role = 'manager',
+    updated_at = NOW()
+WHERE id = 1;

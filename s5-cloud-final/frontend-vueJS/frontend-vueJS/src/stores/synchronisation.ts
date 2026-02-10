@@ -11,7 +11,8 @@ import {
   serverTimestamp,
   query,
   orderBy,
-  Timestamp
+  Timestamp,
+  getDoc
 } from 'firebase/firestore'
 import axios from 'axios'
 
@@ -35,6 +36,7 @@ export interface SignalementFirebase {
   synced?: boolean
   firebase_id?: string
   derniere_maj?: Date | Timestamp | string
+  niveau?: number
 }
 
 export const useSynchronisationStore = defineStore('synchronisation', () => {
@@ -82,6 +84,14 @@ export const useSynchronisationStore = defineStore('synchronisation', () => {
       const signalements: SignalementFirebase[] = []
       querySnapshot.forEach((doc) => {
         const data = doc.data()
+        // ✅ AJOUTER: Log complet des données Firebase
+        console.log('🔥 [FIREBASE RAW DATA]', {
+          docId: doc.id,
+          titre: data.titre,
+          toutes_les_cles: Object.keys(data),
+          donnees_brutes: data
+        })
+        
         signalements.push({
           id: doc.id,
           firebase_id: doc.id,
@@ -94,7 +104,7 @@ export const useSynchronisationStore = defineStore('synchronisation', () => {
       syncStats.value.recus = signalements.length
       
       console.log(`✅ ${signalements.length} signalements récupérés depuis Firebase`)
-      console.log('📄 Premier signalement:', signalements[0])
+      console.log('📄 Premier signalement complet:', signalements[0])
       
       return signalements
       
@@ -257,10 +267,23 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
     const date_signalement = getFirebaseValue(signalement, 'date_signalement')
     const date_debut = getFirebaseValue(signalement, 'date_debut')
     const date_fin = getFirebaseValue(signalement, 'date_fin')
+    let niveau = getFirebaseValue(signalement, 'niveau')  // ✅ Extraire niveau
     
-    console.log('🔍 Valeurs extraites avec gestion des espaces:')
-    console.log('  - description brute:', getFirebaseValue(signalement, 'description'))
-    console.log('  - latitude brute:', getFirebaseValue(signalement, 'latitude'))
+    // ✅ AJOUTER: Fallback pour niveau s'il n'existe pas
+    if (niveau === undefined || niveau === null) {
+      niveau = getFirebaseValue(signalement, 'criticite')  // Essayer un autre nom
+      || getFirebaseValue(signalement, 'urgence')
+      || 5  // Valeur par défaut: 5 (moyen)
+    }
+    
+    console.log('🔍 Valeurs extraites:')
+    console.log('  - titre:', titre)
+    console.log('  - description:', description)
+    console.log('  - latitude:', latitude)
+    console.log('  - longitude:', longitude)
+    console.log('  - niveau (brut):', niveau)
+    console.log('  - niveau (finale):', niveau)
+    console.log('  - Toutes clés Firebase:', Object.keys(signalement))
     
     // Convertir et valider les données
     const payload = {
@@ -277,10 +300,16 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
       longitude: parseFloat(String(longitude)),
       type_probleme: validerTypeProbleme(type_probleme),
       type_route: validerTypeRoute(type_route),
-      firebase_id: signalement.firebase_id || signalement.id || null
+      firebase_id: signalement.firebase_id || signalement.id || null,
+      niveau: niveau && !isNaN(parseInt(String(niveau))) 
+        ? Math.max(1, Math.min(10, parseInt(String(niveau))))
+        : 5  // ✅ Défaut à 5 si invalide
     }
     
-    console.log('📦 Payload envoyé:', JSON.stringify(payload, null, 2))
+    console.log('📦 Payload envoyé (niveau):', { 
+      niveau_payload: payload.niveau,
+      niveau_brut: niveau 
+    })
     
     // Validation avant envoi
     if (!payload.titre || payload.titre === 'Sans titre') {
@@ -369,7 +398,7 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
   const mettreAJourFirebase = async (firebaseId: string, updates: Partial<SignalementFirebase>): Promise<void> => {
     try {
       console.log('🔄 [FIREBASE UPDATE] Mise à jour du document:', firebaseId)
-      console.log('🔄 [FIREBASE UPDATE] Données à mettre à jour:', updates)
+      console.log('🔄 [FIREBASE UPDATE] Données brutes reçues:', updates)
       
       if (!firebaseId) {
         throw new Error('firebase_id manquant')
@@ -377,10 +406,46 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
       
       const docRef = doc(db, 'signalements', firebaseId)
       
+      // ✅ AJOUTER: Récupérer le document existant pour préserver le niveau
+      let niveauExistant: number | null = null
+      try {
+        const existingDoc = await getDoc(docRef)
+        if (existingDoc.exists()) {
+          niveauExistant = existingDoc.data()?.niveau || null
+          console.log('📌 [FIREBASE UPDATE] Niveau existant trouvé:', niveauExistant)
+        }
+      } catch (err) {
+        console.warn('⚠️ [FIREBASE UPDATE] Impossible de récupérer le document existant')
+      }
+      
+      console.log('🔍 [FIREBASE DEBUG] updates.niveau:', updates.niveau)
+      console.log('🔍 [FIREBASE DEBUG] "niveau" in updates:', 'niveau' in updates)
+      
       // Préparer les données pour Firebase
       const dataToUpdate: any = {
-        ...updates,
         derniere_maj: serverTimestamp()
+      }
+      
+      // Ne copier que les champs qui ont une vraie valeur
+      Object.entries(updates).forEach(([key, value]) => {
+        // Ignorer les champs vides, null ou undefined
+        if (value !== null && value !== undefined && value !== '') {
+          dataToUpdate[key] = value
+        }
+        // Pour les champs spécifiques qui peuvent être null intentionnellement
+        if (key === 'date_debut' || key === 'date_fin' || key === 'entreprise' || key === 'niveau') {
+          dataToUpdate[key] = value
+        }
+      })
+      
+      // ✅ Si niveau est présent dans updates, l'utiliser (même si null)
+      if ('niveau' in updates) {
+        dataToUpdate.niveau = updates.niveau
+        console.log('📌 [FIREBASE UPDATE] Niveau mis à jour:', updates.niveau)
+      } else if (niveauExistant !== null) {
+        // Sinon, préserver le niveau existant s'il existe
+        dataToUpdate.niveau = niveauExistant
+        console.log('🔒 [FIREBASE UPDATE] Niveau préservé:', niveauExistant)
       }
       
       // Supprimer les champs indésirables
@@ -388,12 +453,14 @@ const envoyerVersPostgreSQL = async (signalement: SignalementFirebase): Promise<
       delete dataToUpdate.firebase_id
       delete dataToUpdate.synced
       
+      console.log('🔄 [FIREBASE UPDATE] Données filtrées finales:', dataToUpdate)
+      
       await updateDoc(docRef, dataToUpdate)
       
       console.log('✅ [FIREBASE UPDATE] Document mis à jour avec succès:', firebaseId)
       
     } catch (err: any) {
-      console.error('❌ [FIREBASE UPDATE] Erreur la mise à jour Firebase:', {
+      console.error('❌ [FIREBASE UPDATE] Erreur lors de la mise à jour Firebase:', {
         firebaseId,
         error: err.message,
         code: err.code

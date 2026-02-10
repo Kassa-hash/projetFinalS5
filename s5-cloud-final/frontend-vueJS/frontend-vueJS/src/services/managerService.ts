@@ -31,6 +31,7 @@ export interface ProblemeRoutier {
   type_probleme: string
   type_route: string
   firebase_id?: string | null
+  niveau?: number | null  // Nouveau champ criticité
 }
 
 export interface DashboardStats {
@@ -126,7 +127,6 @@ export const managerService = {
     let updatedProbleme: ProblemeRoutier | null = null
     
     try {
-      // Normaliser le statut et valider les données
       const cleanData: any = {
         titre: data.titre?.trim() || '',
         description: data.description?.trim() || '',
@@ -140,7 +140,8 @@ export const managerService = {
         date_debut: data.date_debut || null,
         date_fin: data.date_fin || null,
         latitude: data.latitude,
-        longitude: data.longitude
+        longitude: data.longitude,
+        niveau: data.niveau != null ? Number(data.niveau) : null  // ✅ Accepter 0 comme valeur valide
       }
 
       console.log('🔵 [UPDATE] Envoi des données:', { id, cleanData })
@@ -161,13 +162,20 @@ export const managerService = {
           fbId = updatedProbleme.firebase_id
         }
         
+        console.log('🔍 [SYNC DEBUG] firebase_id:', fbId)
+        console.log('🔍 [SYNC DEBUG] updatedProbleme.niveau:', updatedProbleme?.niveau)
+        console.log('🔍 [SYNC DEBUG] cleanData.niveau:', cleanData.niveau)
+        
         // Si on a un firebase_id, synchroniser
         if (fbId) {
           console.log('🔄 [SYNC] Synchronisation vers Firebase en arrière-plan...')
           
           const syncStore = useSynchronisationStore()
           
-          // Préparer les données pour Firebase
+          // ✅ Utiliser le niveau de la réponse PostgreSQL ou des données envoyées
+          const niveauFinal = updatedProbleme?.niveau ?? cleanData.niveau
+          console.log('📌 [SYNC] Niveau à synchroniser:', niveauFinal)
+          
           const firebaseData = {
             titre: cleanData.titre,
             description: cleanData.description,
@@ -181,8 +189,11 @@ export const managerService = {
             date_debut: cleanData.date_debut,
             date_fin: cleanData.date_fin,
             latitude: cleanData.latitude,
-            longitude: cleanData.longitude
+            longitude: cleanData.longitude,
+            niveau: niveauFinal  // ✅ Utiliser le niveau depuis PostgreSQL
           }
+          
+          console.log('📦 [SYNC] Données à envoyer vers Firebase:', firebaseData)
           
           // Appel asynchrone sans attendre
           syncStore.mettreAJourFirebase(fbId, firebaseData)
@@ -191,14 +202,12 @@ export const managerService = {
             })
             .catch((err: any) => {
               console.warn('⚠️ [SYNC] Erreur synchronisation Firebase (PostgreSQL mis à jour):', err.message)
-              // L'erreur ne bloque pas car PostgreSQL a déjà été mismaj
             })
         } else {
           console.log('⚠️ [SYNC] Pas de firebase_id, synchronisation impossible')
         }
       } catch (syncErr: any) {
         console.warn('⚠️ [SYNC] Erreur lors du setup de synchronisation:', syncErr.message)
-        // Cela ne doit pas bloquer le succès PostgreSQL
       }
       
       return updatedProbleme

@@ -17,6 +17,8 @@ export interface ProblemeRoutier {
   longitude: number;
   type_probleme: TypeProbleme;
   type_route: TypeRoute;
+  firebase_id?: string;
+  niveau?: number | null;  // ✅ AJOUTER: Champ criticité
 }
 
 export interface DashboardStats {

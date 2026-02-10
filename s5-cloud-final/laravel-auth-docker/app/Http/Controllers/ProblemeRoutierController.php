@@ -37,7 +37,8 @@ class ProblemeRoutierController extends Controller
             'longitude' => 'required|numeric|between:-180,180',
             'type_probleme' => 'required|in:nid_de_poule,fissure,affaissement,autre',
             'type_route' => 'required|in:pont,trottoir,route,piste_cyclable,autre',
-            'firebase_id' => 'nullable|string'
+            'firebase_id' => 'nullable|string',
+            'niveau' => 'nullable|integer|min:1|max:10'
         ]);
 
         if ($validator->fails()) {
@@ -48,7 +49,7 @@ class ProblemeRoutierController extends Controller
         }
 
         // Vérifier si existe déjà par firebase_id
-        if ($request->has('firebase_id')) {
+        if ($request->has('firebase_id') && $request->firebase_id) {
             $existing = ProblemeRoutier::where('firebase_id', $request->firebase_id)->first();
             if ($existing) {
                 return response()->json([
@@ -58,7 +59,18 @@ class ProblemeRoutierController extends Controller
             }
         }
 
-        $probleme = ProblemeRoutier::create($request->all());
+        // ✅ Préparer les données avec niveau
+        $data = $request->all();
+        
+        // S'assurer que niveau est un entier valide ou null
+        if (isset($data['niveau'])) {
+            $niveau = intval($data['niveau']);
+            $data['niveau'] = ($niveau >= 1 && $niveau <= 10) ? $niveau : null;
+        } else {
+            $data['niveau'] = null;
+        }
+
+        $probleme = ProblemeRoutier::create($data);
 
         return response()->json([
             'message' => 'Problème créé avec succès',
@@ -80,71 +92,64 @@ class ProblemeRoutierController extends Controller
      */
     public function update(Request $request, $id)
     {
-        Log::info('UPDATE PROBLEME - ID reçu:', ['id' => $id, 'request_data' => $request->all()]);
+        Log::info('UPDATE PROBLEME - ID reçu', ['id' => $id, 'request_data' => $request->all()]);
+
+        $probleme = ProblemeRoutier::find($id);
+
+        if (!$probleme) {
+            Log::error('PROBLÈME NON TROUVÉ - ID inexistant', ['id' => $id]);
+            return response()->json(['message' => 'Problème non trouvé'], 404);
+        }
+
+        Log::info('PROBLEME TROUVÉ', ['id_probleme' => $probleme->id_probleme, 'current_data' => $probleme->toArray()]);
+
+        $validator = Validator::make($request->all(), [
+            'titre' => 'nullable|string|max:150',
+            'description' => 'nullable|string',
+            'statut' => 'nullable|in:nouveau,en_cours,termine',
+            'date_signalement' => 'nullable|date',
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date',
+            'surface_m2' => 'nullable|numeric|min:0',
+            'budget' => 'nullable|numeric|min:0',
+            'entreprise' => 'nullable|string|max:150',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'type_probleme' => 'nullable|in:nid_de_poule,fissure,affaissement,autre',
+            'type_route' => 'nullable|in:pont,trottoir,route,piste_cyclable,autre',
+            'niveau' => 'nullable|integer|min:1|max:10'
+        ]);
+
+        if ($validator->fails()) {
+            Log::error('VALIDATION ÉCHOUÉE', ['errors' => $validator->errors()]);
+            return response()->json([
+                'message' => 'Validation échouée',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         try {
-            // Chercher le problème par ID
-            $probleme = ProblemeRoutier::findOrFail($id);
-            Log::info('PROBLEME TROUVÉ:', ['id_probleme' => $probleme->id_probleme, 'current_data' => $probleme->toArray()]);
-
-            // Validations
-            $validator = Validator::make($request->all(), [
-                'titre' => 'sometimes|string|max:150',
-                'description' => 'sometimes|string',
-                'statut' => 'sometimes|in:nouveau,en_cours,termine',
-                'date_signalement' => 'sometimes|date',
-                'date_debut' => 'nullable|date',
-                'date_fin' => 'nullable|date',
-                'surface_m2' => 'sometimes|numeric|min:0',
-                'budget' => 'sometimes|numeric|min:0',
-                'entreprise' => 'nullable|string|max:150',
-                'latitude' => 'sometimes|numeric|between:-90,90',
-                'longitude' => 'sometimes|numeric|between:-180,180',
-                'type_probleme' => 'sometimes|in:nid_de_poule,fissure,affaissement,autre',
-                'type_route' => 'sometimes|in:pont,trottoir,route,piste_cyclable,autre'
-            ]);
-
-            if ($validator->fails()) {
-                Log::warning('VALIDATION ÉCHOUÉE:', ['errors' => $validator->errors()]);
-                return response()->json([
-                    'error' => 'Validation failed',
-                    'messages' => $validator->errors()
-                ], 422);
-            }
-
-            // Mettre à jour
-            $dataToUpdate = array_filter($request->all(), function($value) {
-                return $value !== null && $value !== '';
-            });
-
-            Log::info('DONNÉES À METTRE À JOUR:', $dataToUpdate);
+            // ✅ Préparer les données avec niveau
+            $data = $request->all();
             
-            $probleme->update($dataToUpdate);
-            $probleme->refresh(); // Recharger depuis la base
-
-            Log::info('MISE À JOUR RÉUSSIE:', ['new_data' => $probleme->toArray()]);
+            if (isset($data['niveau'])) {
+                $niveau = intval($data['niveau']);
+                $data['niveau'] = ($niveau >= 1 && $niveau <= 10) ? $niveau : null;
+            }
+            
+            $probleme->update($data);
+            Log::info('MISE À JOUR RÉUSSIE', ['new_data' => $probleme->fresh()->toArray()]);
 
             return response()->json([
                 'message' => 'Problème mis à jour avec succès',
                 'data' => $probleme
-            ], 200);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            Log::error('PROBLÈME NON TROUVÉ - ID inexistant:', ['id' => $id]);
-            return response()->json([
-                'error' => 'Problème non trouvé',
-                'id_searched' => $id
-            ], 404);
-        } catch (\Exception $e) {
-            Log::error('ERREUR LORS DE LA MISE À JOUR:', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'line' => $e->getLine()
             ]);
-            return response()->json([
-                'error' => 'Erreur serveur lors de la mise à jour',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Exception $e) {
+            Log::error('ERREUR LORS DE LA MISE À JOUR', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erreur lors de la mise à jour', 'error' => $e->getMessage()], 500);
         }
     }
 

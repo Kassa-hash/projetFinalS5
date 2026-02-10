@@ -28,7 +28,8 @@ class ProblemeRoutier extends Model
         'longitude',
         'type_probleme',
         'type_route',
-        'firebase_id'
+        'firebase_id',
+        'niveau'
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class ProblemeRoutier extends Model
         'date_signalement' => 'date',
         'date_debut' => 'date',
         'date_fin' => 'date',
+        'niveau' => 'integer'
     ];
 
     public function photos(): HasMany

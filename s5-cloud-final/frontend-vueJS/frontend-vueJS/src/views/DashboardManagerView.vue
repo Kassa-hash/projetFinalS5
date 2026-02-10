@@ -127,6 +127,9 @@
                 <div class="report-title">
                   <h3>{{ report.titre }}</h3>
                   <span class="report-id">#{{ report.id }}</span>
+                  <span v-if="report.niveau" class="niveau-badge" :class="getNiveauClass(report.niveau)">
+                    📊 Niveau {{ report.niveau }}/10
+                  </span>
                 </div>
                 <div class="report-status">
                   <span :class="['status-badge', report.statut.toLowerCase()]">
@@ -148,11 +151,17 @@
                     </div>
                     <div class="info-field">
                       <label>Surface (m²)</label>
-                      <input v-model.number="report.surface_m2" type="number" placeholder="0">
+                      <input v-model.number="report.surface_m2" type="number" placeholder="0" @input="calculerBudget(report)">
                     </div>
                     <div class="info-field">
-                      <label>Budget (€)</label>
-                      <input v-model.number="report.budget" type="number" placeholder="0">
+                      <label>💰 Prix par m² <span class="auto-badge">Auto</span></label>
+                      <input v-model.number="report.prixCalcule" type="number" placeholder="Chargement..." readonly class="readonly-field">
+                      <span class="field-hint">Récupéré automatiquement selon le type</span>
+                    </div>
+                    <div class="info-field">
+                      <label>Budget (€) <span class="auto-badge">Auto</span></label>
+                      <input v-model.number="report.budget" type="number" placeholder="0" readonly class="readonly-field">
+                      <span class="field-hint">Budget = prix/m² × niveau × surface</span>
                     </div>
                     <div class="info-field">
                       <label>Entreprise</label>
@@ -160,21 +169,34 @@
                     </div>
                     <div class="info-field">
                       <label>Type de problème</label>
-                      <select v-model="report.type_probleme">
-                        <option value="nid_poule">Nid de poule</option>
+                      <select v-model="report.type_probleme" @change="chargerPrixEtCalculer(report)">
+                        <option value="nid_de_poule">Nid de poule</option>
                         <option value="fissure">Fissure</option>
-                        <option value="ecroulement">Écroulement</option>
+                        <option value="affaissement">Affaissement</option>
                         <option value="autre">Autre</option>
                       </select>
                     </div>
                     <div class="info-field">
                       <label>Type de route</label>
-                      <select v-model="report.type_route">
-                        <option value="nationale">Route nationale</option>
-                        <option value="provinciale">Route provinciale</option>
-                        <option value="secondaire">Route secondaire</option>
+                      <select v-model="report.type_route" @change="chargerPrixEtCalculer(report)">
+                        <option value="route">Route</option>
+                        <option value="pont">Pont</option>
+                        <option value="trottoir">Trottoir</option>
+                        <option value="piste_cyclable">Piste cyclable</option>
                         <option value="autre">Autre</option>
                       </select>
+                    </div>
+                    <div class="info-field">
+                      <label>📊 Niveau de criticité (1-10)</label>
+                      <input 
+                        v-model.number="report.niveau" 
+                        type="number" 
+                        min="1" 
+                        max="10" 
+                        placeholder="1 (faible) à 10 (critique)"
+                        @input="validateNiveau(report); calculerBudget(report)"
+                      >
+                      <span class="niveau-description">{{ getNiveauDescription(report.niveau) }}</span>
                     </div>
                   </div>
                 </div>
@@ -310,6 +332,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { managerService, type User, type ProblemeRoutier } from '@/services/managerService'
+import { prixService } from '@/services/prixService'
 
 const authStore = useAuthStore()
 const activeTab = ref<'users' | 'reports'>('users')
@@ -403,6 +426,7 @@ const loadReportsData = async () => {
       statut: p.statut,
       surface_m2: p.surface_m2,
       budget: p.budget,
+      prixCalcule: 0, // Sera chargé quand on ouvre le signalement
       entreprise: p.entreprise || '',
       type_probleme: p.type_probleme,
       type_route: p.type_route,
@@ -411,8 +435,11 @@ const loadReportsData = async () => {
       firebase_id: p.firebase_id || null,
       date_signalement: p.date_signalement,
       date_debut: p.date_debut || '',
-      date_fin: p.date_fin || ''
+      date_fin: p.date_fin || '',
+      niveau: p.niveau || null
     } as any))
+    
+    console.log('📊 Signalements chargés:', reportsData.value.length)
   } catch (error: any) {
     console.error('Erreur lors du chargement des signalements:', error)
     formMessage.value = { 
@@ -447,8 +474,17 @@ const calculateProcessingDays = (report: any) => {
   return '-'
 }
 
-const toggleReportExpand = (id: number) => {
-  expandedReportId.value = expandedReportId.value === id ? null : id
+const toggleReportExpand = async (id: number) => {
+  const wasExpanded = expandedReportId.value === id
+  expandedReportId.value = wasExpanded ? null : id
+  
+  // Si on ouvre le signalement, charger le prix
+  if (!wasExpanded) {
+    const report = reportsData.value.find(r => r.id === id)
+    if (report) {
+      await chargerPrixEtCalculer(report)
+    }
+  }
 }
 
 const addNewUser = async () => {
@@ -564,7 +600,8 @@ const saveReport = async (report: any) => {
       longitude: report.longitude,
       date_signalement: report.date_signalement,
       date_debut: report.date_debut || null,
-      date_fin: report.date_fin || null
+      date_fin: report.date_fin || null,
+      niveau: report.niveau  // ✅ Inclure le niveau
     }
 
     const reportId = report.id || report.id_probleme
@@ -598,6 +635,72 @@ const saveReport = async (report: any) => {
     loadingReports.value = false
   }
 }
+
+const getNiveauClass = (niveau: number | null | undefined) => {
+  if (!niveau) return ''
+  if (niveau <= 3) return 'niveau-faible'
+  if (niveau <= 6) return 'niveau-moyen'
+  if (niveau <= 8) return 'niveau-eleve'
+  return 'niveau-critique'
+}
+
+const getNiveauDescription = (niveau: number | null | undefined) => {
+  if (!niveau) return 'Aucun niveau défini'
+  if (niveau <= 2) return '🟢 Faible - Intervention non urgente'
+  if (niveau <= 4) return '🟡 Modéré - À surveiller'
+  if (niveau <= 6) return '🟠 Moyen - Intervention souhaitable'
+  if (niveau <= 8) return '🔴 Élevé - Intervention nécessaire rapidement'
+  return '🚨 CRITIQUE - Intervention d\'urgence requise'
+}
+
+const validateNiveau = (report: any) => {
+  if (report.niveau < 1) report.niveau = 1
+  if (report.niveau > 10) report.niveau = 10
+}
+
+// � Charger le prix depuis l'API et calculer le budget
+const chargerPrixEtCalculer = async (report: any) => {
+  if (!report.type_probleme || !report.type_route) {
+    console.warn('Type de problème ou type de route manquant')
+    return
+  }
+  
+  try {
+    console.log('🔍 [PRIX] Récupération du prix pour:', report.type_probleme, report.type_route)
+    const prixData = await prixService.getPrix(report.type_probleme, report.type_route)
+    
+    if (prixData) {
+      report.prixCalcule = prixData.prix
+      console.log('✅ [PRIX] Prix récupéré:', prixData.prix, '€/m²')
+      calculerBudget(report)
+    } else {
+      report.prixCalcule = 0
+      console.warn('⚠️ [PRIX] Aucun prix trouvé pour cette combinaison')
+    }
+  } catch (error) {
+    console.error('❌ [PRIX] Erreur lors du chargement du prix:', error)
+    report.prixCalcule = 0
+  }
+}
+
+// 💰 Calcul automatique du budget
+const calculerBudget = (report: any) => {
+  const prixParM2 = Number(report.prixCalcule) || 0
+  const niveau = Number(report.niveau) || 0
+  const surface = Number(report.surface_m2) || 0
+  
+  // Formule : budget = prix_par_m2 × niveau × surface_m2
+  report.budget = Math.round(prixParM2 * niveau * surface)
+  
+  console.log('💰 [CALCUL BUDGET]', {
+    prix_par_m2: prixParM2,
+    niveau: niveau,
+    surface_m2: surface,
+    budget_calculé: report.budget
+  })
+}
+
+
 </script>
 
 <style scoped>
@@ -992,6 +1095,35 @@ const saveReport = async (report: any) => {
   border-color: #667eea;
   box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
 }
+
+/* Champ en lecture seule (budget calculé automatiquement) */
+.readonly-field {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  color: #666;
+}
+
+/* Badge "Auto" pour indiquer un champ automatique */
+.auto-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+/* Hint sous le champ */
+.field-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
 
 /* GESTION DU STATUT */
 .status-management {
