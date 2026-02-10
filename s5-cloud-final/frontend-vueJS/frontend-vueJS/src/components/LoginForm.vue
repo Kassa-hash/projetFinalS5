@@ -31,7 +31,7 @@
             v-model="email"
             type="email"
             id="email"
-            placeholder="votre@email.com"
+            placeholder="manager@projet.mg"
             required
             @focus="authStore.clearError()"
           />
@@ -49,10 +49,23 @@
             v-model="password"
             type="password"
             id="password"
-            placeholder="••••••••"
+            placeholder="Manager123!"
             required
             @focus="authStore.clearError()"
           />
+        </div>
+
+        <!-- Message d'information pour la correction -->
+        <div class="info-box">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <div>
+            <strong>Compte de test pour correction</strong>
+            <p>Utilisez les identifiants en placeholder</p>
+          </div>
         </div>
 
         <button type="submit" :disabled="authStore.loading" class="btn-submit">
@@ -238,6 +251,36 @@ input::placeholder {
   cursor: pointer;
   transition: all 0.2s;
   margin-top: 0.5rem;
+}
+
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #93c5fd;
+  color: #1e40af;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.info-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info-box strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+}
+
+.info-box p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .btn-submit:hover:not(:disabled) {
