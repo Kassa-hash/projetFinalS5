@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../services/api"; // Axios configuré
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -13,11 +14,15 @@ function Login() {
     setError("");
 
     try {
-      // On appelle l'API Laravel /login
-      const res = await api.post("/login", { email, password });
+      // 🔑 Connexion Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Stocker le token retourné par Laravel (Sanctum ou JWT)
-      localStorage.setItem("token", res.data.token);
+      // Récupérer le token ID Firebase
+      const idToken = await userCredential.user.getIdToken();
+
+      // Stocker localement si besoin
+      localStorage.setItem("id_token", idToken);
+      localStorage.setItem("user", JSON.stringify(userCredential.user));
 
       // Redirection vers le dashboard
       navigate("/dashboard");
@@ -30,7 +35,6 @@ function Login() {
   return (
     <form onSubmit={handleSubmit}>
       <h1>Connexion</h1>
-
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       <input
