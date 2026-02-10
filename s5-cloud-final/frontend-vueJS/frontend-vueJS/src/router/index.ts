@@ -40,8 +40,8 @@ const routes = [
   {
     path: '/dashboard/manager',
     component: () => import('@/views/DashboardManagerView.vue'),
-    // meta: { requiresAuth: true, requiredRole: 'manager' }*
-    meta: { requiresAuth: false}
+    meta: { requiresAuth: true, requiredRole: 'manager' }
+    // meta: { requiresAuth: false}
 
   },
   {

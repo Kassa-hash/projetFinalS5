@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\UnlockAccountController;
+use App\Http\Controllers\Api\UserManagementController;
 use App\Http\Controllers\FirebaseAuthController;
 use App\Http\Controllers\PhotoController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,16 @@ Route::middleware('auth:sanctum')->group(function () {
 // Account management endpoints
 Route::post('/unlock-account', [UnlockAccountController::class, 'unlock']);
 Route::get('/account-status/{email}', [UnlockAccountController::class, 'status']);
+
+// User management endpoints (pour les managers/admins)
+Route::prefix('users')->group(function () {
+    Route::get('/', [UserManagementController::class, 'index']);
+    Route::get('/locked', [UserManagementController::class, 'locked']);
+    Route::get('/stats', [UserManagementController::class, 'stats']);
+    Route::get('/{id}', [UserManagementController::class, 'show']);
+    Route::put('/{id}', [UserManagementController::class, 'update']);
+    Route::delete('/{id}', [UserManagementController::class, 'destroy']);
+});
 
 Route::get('/problemes', [ProblemeRoutierController::class, 'index']);
 Route::get('/dashboard', [ProblemeRoutierController::class, 'dashboard']);
