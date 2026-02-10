@@ -21,23 +21,23 @@ const logout = async () => {
             🗺️ Offline Map App
           </router-link>
         </div>
-        
+
         <div class="navbar-menu">
           <!-- Menu public -->
           <div v-if="!authStore.isAuthenticated" class="nav-links">
-            <router-link to="/login" class="nav-link">Connexion</router-link>
-            <router-link to="/register" class="nav-link">Inscription</router-link>
+              <router-link to="/login" class="nav-link">Connexion</router-link>
           </div>
+
 
           <!-- Menu authentifié -->
           <div v-else class="nav-links">
             <span class="user-info">
               {{ authStore.user?.name }} ({{ authStore.userRole }})
             </span>
-            <router-link 
-              :to="'/dashboard/' + authStore.userRole" 
-              class="nav-link"
-            >
+            <router-link v-if="authStore.userRole == 'manager'" to="/register" class="nav-link">
+              Inscription
+            </router-link>
+            <router-link :to="'/dashboard/' + authStore.userRole" class="nav-link">
               Dashboard
             </router-link>
             <button @click="logout" class="nav-link logout-btn">

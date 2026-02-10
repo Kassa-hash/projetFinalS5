@@ -27,9 +27,23 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const response = await authService.register(data)
-      token.value = response.token
-      user.value = response.user
-      localStorage.setItem('token', response.token)
+      
+      // Gérer les deux types de réponses (Firebase et Postgres)
+      if (response.id_token) {
+        token.value = response.id_token
+        localStorage.setItem('token', response.id_token)
+      } else if (response.token) {
+        token.value = response.token
+        localStorage.setItem('token', response.token)
+      }
+      
+      user.value = useAuthStore().user
+      
+      // Si pas de token (fallback Postgres sans token), faire un login automatique
+      if (!token.value && response.source === 'postgres') {
+        await login(data.email, data.password)
+      }
+      
       return response
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Erreur lors de l\'inscription'

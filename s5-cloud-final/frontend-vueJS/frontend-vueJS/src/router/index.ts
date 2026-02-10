@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
     path: '/register',
     name: 'register',
     component: () => import('@/views/RegisterView.vue'),
-    meta: { requiresGuest: true }
+    meta: { requiresAuth: true, requiredRole: 'manager' }
   },
   {
     path: '/dashboard/user',
