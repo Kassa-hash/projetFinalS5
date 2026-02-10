@@ -16,6 +16,12 @@ const routes = [
   //   name: 'home',
   //   component: Synchro
   // },
+
+  {
+  path: '/sync-firebase',
+  name: 'sync-firebase',
+  component: () => import('@/views/SyncFirebaseView.vue')
+},
   {
     path: '/login',
     name: 'login',

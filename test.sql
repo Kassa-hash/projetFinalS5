@@ -15,22 +15,23 @@ INSERT INTO probleme_routier (
     type_probleme, 
     type_route
 ) VALUES 
--- Zone Analakely
+
 (
-    'Nid de poule Avenue de l''Indépendance',
-    'Important nid de poule causant des dégâts aux véhicules, situé devant le marché Analakely',
-    'en_cours',
-    '2025-01-15',
-    '2025-01-20',
-    NULL,
-    12.50,
-    2500000,
-    'TRAVAUX PUBLICS MADA',
-    -18.9134,
-    47.5228,
-    'nid_de_poule',
-    'route'
+    'Détérioration piste cyclable RN7',
+    'Piste cyclable en mauvais état, dalles cassées',
+    'termine',
+    '2024-12-05',
+    '2024-12-18',
+    '2025-01-08',
+    38.90,
+    7800000,
+    'COLAS MADAGASCAR',
+    -18.9323,
+    47.5512,
+    'autre',
+    'piste_cyclable'
 ),
+
 
 -- Zone Behoririka
 (
@@ -47,7 +48,7 @@ INSERT INTO probleme_routier (
     47.5265,
     'fissure',
     'route'
-),
+);
 
 -- Zone 67 ha
 (
@@ -237,20 +238,23 @@ INSERT INTO probleme_routier (
 ),
 
 -- Piste cyclable Andohatapenaka
+
+
+-- Zone Analakely
 (
-    'Détérioration piste cyclable RN7',
-    'Piste cyclable en mauvais état, dalles cassées',
-    'termine',
-    '2024-12-05',
-    '2024-12-18',
-    '2025-01-08',
-    38.90,
-    7800000,
-    'COLAS MADAGASCAR',
-    -18.9323,
-    47.5512,
-    'autre',
-    'piste_cyclable'
+    'Nid de poule Avenue de l''Indépendance',
+    'Important nid de poule causant des dégâts aux véhicules, situé devant le marché Analakely',
+    'en_cours',
+    '2025-01-15',
+    '2025-01-20',
+    NULL,
+    12.50,
+    2500000,
+    'TRAVAUX PUBLICS MADA',
+    -18.9134,
+    47.5228,
+    'nid_de_poule',
+    'route'
 ),
 
 -- Zone Ampefiloha

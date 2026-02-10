@@ -136,4 +136,25 @@ class ProblemeRoutierController extends Controller
             'exists' => $exists
         ]);
     }
+
+    /**
+     * Retourner les statistiques du tableau de bord
+     */
+    public function dashboard()
+    {
+        $nb_points = ProblemeRoutier::count();
+        $surface_totale = ProblemeRoutier::sum('surface_m2') ?? 0;
+        $budget_total = ProblemeRoutier::sum('budget') ?? 0;
+        
+        // Calculer l'avancement en pourcentage (nombre de problèmes terminés / total)
+        $termines = ProblemeRoutier::where('statut', 'termine')->count();
+        $avancement_pourcent = $nb_points > 0 ? round(($termines / $nb_points) * 100) : 0;
+        
+        return response()->json([
+            'nb_points' => $nb_points,
+            'surface_totale' => $surface_totale,
+            'budget_total' => $budget_total,
+            'avancement_pourcent' => $avancement_pourcent
+        ]);
+    }
 }
