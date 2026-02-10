@@ -14,9 +14,16 @@ class UserManagementController extends Controller
      */
     public function index(): JsonResponse
     {
-        $users = User::select('id', 'name', 'email', 'role', 'phone', 'account_lockout', 'login_attempts', 'locked_until', 'firebase_uid')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $users = User::select('id', 'name', 'email', 'role', 'phone', 'account_lockout', 'login_attempts', 'locked_until', 'firebase_uid')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } catch (\Exception $e) {
+            // Fallback si les colonnes login_attempts/locked_until n'existent pas encore
+            $users = User::select('id', 'name', 'email', 'role', 'phone', 'account_lockout', 'firebase_uid')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
         
         return response()->json($users);
     }
@@ -26,10 +33,17 @@ class UserManagementController extends Controller
      */
     public function locked(): JsonResponse
     {
-        $users = User::where('account_lockout', true)
-            ->select('id', 'name', 'email', 'role', 'phone', 'account_lockout', 'login_attempts', 'locked_until')
-            ->orderBy('locked_until', 'desc')
-            ->get();
+        try {
+            $users = User::where('account_lockout', true)
+                ->select('id', 'name', 'email', 'role', 'phone', 'account_lockout', 'login_attempts', 'locked_until')
+                ->orderBy('locked_until', 'desc')
+                ->get();
+        } catch (\Exception $e) {
+            $users = User::where('account_lockout', true)
+                ->select('id', 'name', 'email', 'role', 'phone', 'account_lockout')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
         
         return response()->json($users);
     }

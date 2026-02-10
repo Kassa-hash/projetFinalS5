@@ -21,6 +21,13 @@
         <span class="tab-icon">🛣️</span>
         Gestion Signalements
       </button>
+      <button 
+        :class="['tab-btn', { active: activeTab === 'tarifs' }]"
+        @click="activeTab = 'tarifs'; loadPrixData()"
+      >
+        <span class="tab-icon">💰</span>
+        Gestion Tarifs
+      </button>
     </div>
 
     <div class="dashboard-content">
@@ -324,6 +331,112 @@
           </div>
         </div>
       </div>
+      <!-- TAB 3: GESTION TARIFS -->
+      <div v-if="activeTab === 'tarifs'" class="tab-content">
+        <!-- Message de feedback -->
+        <div v-if="prixMessage" :class="['form-message', prixMessage.type]">
+          {{ prixMessage.text }}
+        </div>
+
+        <!-- Formulaire d'ajout / modification de prix -->
+        <div class="card card-form">
+          <h2>{{ editingPrix ? '✏️ Modifier le Tarif' : '➕ Nouveau Tarif' }}</h2>
+          <form @submit.prevent="editingPrix ? submitUpdatePrix() : submitCreatePrix()" class="modern-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prix-type-probleme">
+                  <span class="label-icon">🔧</span> Type de problème
+                </label>
+                <select id="prix-type-probleme" v-model="prixForm.type_probleme" required>
+                  <option value="" disabled>-- Sélectionner --</option>
+                  <option value="nid_de_poule">Nid de poule</option>
+                  <option value="fissure">Fissure</option>
+                  <option value="affaissement">Affaissement</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="prix-type-route">
+                  <span class="label-icon">🛣️</span> Type de route
+                </label>
+                <select id="prix-type-route" v-model="prixForm.type_route" required>
+                  <option value="" disabled>-- Sélectionner --</option>
+                  <option value="route">Route</option>
+                  <option value="pont">Pont</option>
+                  <option value="trottoir">Trottoir</option>
+                  <option value="piste_cyclable">Piste cyclable</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prix-montant">
+                  <span class="label-icon">💶</span> Prix par m² (Ar)
+                </label>
+                <input id="prix-montant" v-model.number="prixForm.prix" type="number" min="0" step="100" placeholder="Ex: 15000" required />
+              </div>
+              <div class="form-group">
+                <label for="prix-description">
+                  <span class="label-icon">📝</span> Description
+                </label>
+                <input id="prix-description" v-model="prixForm.description" type="text" placeholder="Description optionnelle" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" :disabled="loadingPrix">
+                {{ editingPrix ? '💾 Mettre à jour' : '➕ Ajouter le tarif' }}
+              </button>
+              <button v-if="editingPrix" type="button" class="btn-secondary" @click="cancelEditPrix()">
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tableau des prix actifs -->
+        <div class="card">
+          <h2>📋 Tarifs Actifs</h2>
+          <div v-if="loadingPrix" class="loading-state">
+            <div class="spinner"></div>
+            <p>Chargement des tarifs...</p>
+          </div>
+          <div v-else-if="prixList.length === 0" class="empty-state">
+            <p>Aucun tarif configuré</p>
+          </div>
+          <div v-else class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Type de problème</th>
+                  <th>Type de route</th>
+                  <th>Prix / m² (Ar)</th>
+                  <th>Description</th>
+                  <th>Date début</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="prix in prixList" :key="prix.id_prix">
+                  <td><span class="type-chip probleme">{{ formatTypeName(prix.type_probleme) }}</span></td>
+                  <td><span class="type-chip route">{{ formatTypeName(prix.type_route) }}</span></td>
+                  <td class="prix-cell">{{ Number(prix.prix).toLocaleString() }} Ar</td>
+                  <td>{{ prix.description || '—' }}</td>
+                  <td>{{ prix.date_debut ? new Date(prix.date_debut).toLocaleDateString('fr-FR') : '—' }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-icon btn-edit" @click="startEditPrix(prix)" title="Modifier">
+                      ✏️
+                    </button>
+                    <button class="btn-icon btn-delete" @click="confirmDeletePrix(prix)" title="Désactiver">
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -335,12 +448,13 @@ import { managerService, type User, type ProblemeRoutier } from '@/services/mana
 import { prixService } from '@/services/prixService'
 
 const authStore = useAuthStore()
-const activeTab = ref<'users' | 'reports'>('users')
+const activeTab = ref<'users' | 'reports' | 'tarifs'>('users')
 const expandedReportId = ref<number | null>(null)
 const unlockedUserIds = ref<number[]>([])
 const formMessage = ref<{ type: string; text: string } | null>(null)
 const loading = ref(false)
 const loadingReports = ref(false)
+const loadingPrix = ref(false)
 
 // Données utilisateurs
 const newUser = ref({
@@ -357,6 +471,17 @@ const allUsers = ref<User[]>([])
 
 // Données des signalements (chargées depuis l'API)
 const reportsData = ref<ProblemeRoutier[]>([])
+
+// Données des prix
+const prixList = ref<any[]>([])
+const editingPrix = ref<any>(null)
+const prixMessage = ref<{ type: string; text: string } | null>(null)
+const prixForm = ref({
+  type_probleme: '',
+  type_route: '',
+  prix: 0,
+  description: ''
+})
 
 // Statistiques utilisateurs (calculées depuis les données réelles)
 const userStats = ref({
@@ -683,6 +808,110 @@ const chargerPrixEtCalculer = async (report: any) => {
   }
 }
 
+// --- GESTION DES TARIFS ---
+const loadPrixData = async () => {
+  loadingPrix.value = true
+  try {
+    prixList.value = await prixService.getAllPrix()
+  } catch (error) {
+    console.error('Erreur chargement prix:', error)
+    prixMessage.value = { type: 'error', text: 'Erreur lors du chargement des tarifs' }
+    setTimeout(() => { prixMessage.value = null }, 4000)
+  } finally {
+    loadingPrix.value = false
+  }
+}
+
+const submitCreatePrix = async () => {
+  if (!prixForm.value.type_probleme || !prixForm.value.type_route || !prixForm.value.prix) {
+    prixMessage.value = { type: 'error', text: 'Veuillez remplir tous les champs obligatoires' }
+    return
+  }
+  loadingPrix.value = true
+  try {
+    await prixService.createPrix(prixForm.value)
+    prixMessage.value = { type: 'success', text: 'Tarif créé avec succès !' }
+    resetPrixForm()
+    await loadPrixData()
+    setTimeout(() => { prixMessage.value = null }, 3000)
+  } catch (error: any) {
+    prixMessage.value = { type: 'error', text: error.response?.data?.message || 'Erreur lors de la création du tarif' }
+    setTimeout(() => { prixMessage.value = null }, 5000)
+  } finally {
+    loadingPrix.value = false
+  }
+}
+
+const startEditPrix = (prix: any) => {
+  editingPrix.value = prix
+  prixForm.value = {
+    type_probleme: prix.type_probleme,
+    type_route: prix.type_route,
+    prix: prix.prix,
+    description: prix.description || ''
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const submitUpdatePrix = async () => {
+  if (!editingPrix.value) return
+  loadingPrix.value = true
+  try {
+    await prixService.updatePrix(editingPrix.value.id_prix, {
+      prix: prixForm.value.prix,
+      description: prixForm.value.description
+    })
+    prixMessage.value = { type: 'success', text: 'Tarif mis à jour avec succès !' }
+    cancelEditPrix()
+    await loadPrixData()
+    setTimeout(() => { prixMessage.value = null }, 3000)
+  } catch (error: any) {
+    prixMessage.value = { type: 'error', text: error.response?.data?.message || 'Erreur lors de la mise à jour' }
+    setTimeout(() => { prixMessage.value = null }, 5000)
+  } finally {
+    loadingPrix.value = false
+  }
+}
+
+const cancelEditPrix = () => {
+  editingPrix.value = null
+  resetPrixForm()
+}
+
+const resetPrixForm = () => {
+  prixForm.value = { type_probleme: '', type_route: '', prix: 0, description: '' }
+}
+
+const confirmDeletePrix = async (prix: any) => {
+  if (!confirm(`Désactiver le tarif ${formatTypeName(prix.type_probleme)} / ${formatTypeName(prix.type_route)} ?`)) return
+  loadingPrix.value = true
+  try {
+    await prixService.deletePrix(prix.id_prix)
+    prixMessage.value = { type: 'success', text: 'Tarif désactivé avec succès' }
+    await loadPrixData()
+    setTimeout(() => { prixMessage.value = null }, 3000)
+  } catch (error) {
+    prixMessage.value = { type: 'error', text: 'Erreur lors de la désactivation' }
+    setTimeout(() => { prixMessage.value = null }, 5000)
+  } finally {
+    loadingPrix.value = false
+  }
+}
+
+const formatTypeName = (type: string): string => {
+  const names: Record<string, string> = {
+    'nid_de_poule': 'Nid de poule',
+    'fissure': 'Fissure',
+    'affaissement': 'Affaissement',
+    'route': 'Route',
+    'pont': 'Pont',
+    'trottoir': 'Trottoir',
+    'piste_cyclable': 'Piste cyclable',
+    'autre': 'Autre'
+  }
+  return names[type] || type.charAt(0).toUpperCase() + type.slice(1)
+}
+
 // 💰 Calcul automatique du budget
 const calculerBudget = (report: any) => {
   const prixParM2 = Number(report.prixCalcule) || 0
@@ -704,280 +933,497 @@ const calculerBudget = (report: any) => {
 </script>
 
 <style scoped>
+/* ===== BASE LAYOUT ===== */
 .dashboard-container {
   max-width: 100%;
   margin: 0;
   padding: 2rem 5%;
+  background: #f0f2f5;
+  min-height: 100vh;
 }
 
 .dashboard-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 3rem 2rem;
-  border-radius: 10px;
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
   margin-bottom: 2rem;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.25);
 }
 
 .dashboard-header h1 {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
+  font-size: 2.4rem;
+  margin-bottom: 0.3rem;
+  font-weight: 700;
 }
 
 .dashboard-header p {
-  font-size: 1.1rem;
-  opacity: 0.9;
+  font-size: 1.05rem;
+  opacity: 0.85;
 }
 
-/* Onglets de navigation */
+/* ===== TABS ===== */
 .tabs-navigation {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .tab-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.4rem;
   background: transparent;
   border: none;
-  border-bottom: 3px solid transparent;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.25s;
   color: #666;
 }
 
 .tab-btn:hover {
+  background: #f0f4ff;
   color: #667eea;
 }
 
 .tab-btn.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .tab-icon {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
 }
 
 .dashboard-content {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .tab-content {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
+/* ===== CARDS ===== */
 .card {
   background: white;
   padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: box-shadow 0.3s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.card-form {
+  border-left: 4px solid #667eea;
 }
 
 .card h2 {
-  color: #333;
+  color: #1a1a2e;
   margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-  border-bottom: 2px solid #667eea;
-  padding-bottom: 1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid #f0f2f5;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .card h4 {
   color: #333;
   margin-bottom: 1rem;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
-/* FORMULAIRE D'AJOUT UTILISATEUR */
-.user-form {
-  display: grid;
+/* ===== MODERN FORM STYLES ===== */
+.modern-form {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
 }
 
-.form-grid {
+.form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
+  gap: 0.4rem;
 }
 
-.form-group label {
+.form-group label,
+.info-field label,
+.date-field label,
+.status-select-group label {
   font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
+  color: #374151;
+  margin-bottom: 0.3rem;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.label-icon {
+  font-size: 1rem;
 }
 
 .form-group input,
 .form-group select,
-.form-group textarea {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
+.form-group textarea,
+.info-field input,
+.info-field select,
+.info-field textarea,
+.date-field input,
+.status-select-group select {
+  padding: 0.7rem 0.9rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  transition: all 0.25s;
+  background: #fafbfc;
+  color: #1a1a2e;
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover,
+.info-field input:hover,
+.info-field select:hover,
+.info-field textarea:hover,
+.date-field input:hover {
+  border-color: #c4b5fd;
 }
 
 .form-group input:focus,
 .form-group select:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.info-field input:focus,
+.info-field select:focus,
+.info-field textarea:focus,
+.date-field input:focus,
+.status-select-group select:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  background: #fff;
 }
 
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+/* ===== BUTTONS ===== */
 .btn-primary {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.6rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 5px;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  align-self: flex-start;
+  transition: all 0.25s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
 }
 
-.form-message {
-  padding: 1rem;
-  border-radius: 5px;
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.6rem;
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+/* ===== FORM MESSAGE ===== */
+.form-message {
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .form-message.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
 }
 
 .form-message.error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
-/* TABLEAU UTILISATEURS */
+/* ===== TABLES ===== */
+.table-responsive,
 .users-table-container {
   overflow-x: auto;
+  border-radius: 10px;
 }
 
-.users-table {
+.modern-table,
+.users-table,
+.stats-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
+.modern-table th,
 .users-table th,
-.users-table td {
-  padding: 1rem;
+.stats-table th {
+  padding: 0.9rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fb;
+  font-weight: 700;
+  color: #374151;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.users-table th {
-  background: #f5f5f5;
+.modern-table td,
+.users-table td,
+.stats-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f0f2f5;
+  color: #4b5563;
+  font-size: 0.93rem;
+}
+
+.modern-table tbody tr:hover,
+.users-table tr:hover,
+.stats-table tr:hover {
+  background: #f8f9ff;
+}
+
+.modern-table tbody tr:last-child td,
+.users-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== TYPE CHIPS ===== */
+.type-chip {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #333;
 }
 
-.users-table tr:hover {
-  background: #f9f9f9;
+.type-chip.probleme {
+  background: #fef3c7;
+  color: #92400e;
 }
 
+.type-chip.route {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.prix-cell {
+  font-weight: 700;
+  color: #059669 !important;
+  font-size: 1rem !important;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.btn-edit {
+  background: #ede9fe;
+}
+
+.btn-edit:hover {
+  background: #ddd6fe;
+  transform: scale(1.08);
+}
+
+.btn-delete {
+  background: #fee2e2;
+}
+
+.btn-delete:hover {
+  background: #fecaca;
+  transform: scale(1.08);
+}
+
+/* ===== BADGES ===== */
 .role-badge {
   display: inline-block;
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
-  padding: 4px 12px;
+  padding: 0.25rem 0.75rem;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 0.25rem 0.75rem;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .status-badge.locked {
-  background: #f8d7da;
-  color: #721c24;
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .status-badge.nouveau {
-  background: #cfe2ff;
-  color: #084298;
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .status-badge.en_cours {
-  background: #fff3cd;
-  color: #664d03;
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.status-badge.terminé {
-  background: #d1e7dd;
-  color: #0f5132;
+.status-badge.terminé,
+.status-badge.termine {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .btn-unlock {
   padding: 0.5rem 1rem;
-  background: #28a745;
+  background: linear-gradient(135deg, #34d399, #059669);
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.3s;
+  font-size: 0.88rem;
+  transition: all 0.25s;
 }
 
 .btn-unlock:hover:not(:disabled) {
-  background: #218838;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
 }
 
 .btn-unlock:disabled {
-  background: #6c757d;
+  background: #9ca3af;
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-/* LISTE SIGNALEMENTS */
+/* ===== NIVEAU BADGES ===== */
+.niveau-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.niveau-faible { background: #d1fae5; color: #065f46; }
+.niveau-moyen { background: #fef3c7; color: #92400e; }
+.niveau-eleve { background: #fed7aa; color: #9a3412; }
+.niveau-critique { background: #fee2e2; color: #991b1b; }
+
+.niveau-description {
+  display: block;
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-top: 0.3rem;
+}
+
+/* ===== REPORTS LIST ===== */
 .reports-list {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .report-item {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   overflow: hidden;
   transition: all 0.3s;
+  background: white;
 }
 
 .report-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .report-item.expanded {
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  border-color: #c4b5fd;
 }
 
 .report-header {
@@ -985,62 +1431,61 @@ const calculerBudget = (report: any) => {
   grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 1.5rem;
-  padding: 1.5rem;
-  background: #f9f9f9;
+  padding: 1.25rem 1.5rem;
+  background: #fafbfc;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background 0.25s;
 }
 
 .report-header:hover {
-  background: #f0f0f0;
+  background: #f0f4ff;
 }
 
 .report-title {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .report-title h3 {
   margin: 0;
-  color: #333;
-  font-size: 1.1rem;
+  color: #1a1a2e;
+  font-size: 1.05rem;
 }
 
 .report-id {
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .report-status {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .progress-indicator {
-  font-weight: 600;
+  font-weight: 700;
   color: #667eea;
-  min-width: 50px;
+  min-width: 45px;
 }
 
 .expand-icon {
   cursor: pointer;
   transition: transform 0.3s;
-}
-
-.report-item.expanded .expand-icon {
-  transform: rotate(180deg);
+  font-size: 0.85rem;
+  color: #9ca3af;
 }
 
 .report-details {
   padding: 2rem;
   background: white;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid #f0f2f5;
   display: grid;
   gap: 2rem;
 }
@@ -1052,13 +1497,14 @@ const calculerBudget = (report: any) => {
 
 .details-section h4 {
   margin: 0;
-  color: #333;
+  color: #1a1a2e;
+  font-weight: 700;
 }
 
 .info-grid-report {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
 }
 
 .info-field {
@@ -1066,66 +1512,40 @@ const calculerBudget = (report: any) => {
   flex-direction: column;
 }
 
-.info-field label {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
-  font-size: 0.95rem;
-}
-
-.info-field input,
-.info-field select,
-.info-field textarea {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 0.95rem;
-  transition: border-color 0.3s;
-}
-
 .info-field textarea {
   min-height: 80px;
   resize: vertical;
 }
 
-.info-field input:focus,
-.info-field select:focus,
-.info-field textarea:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
-}
-
-/* Champ en lecture seule (budget calculé automatiquement) */
+/* Champ en lecture seule */
 .readonly-field {
-  background-color: #f5f5f5;
+  background-color: #f3f4f6 !important;
   cursor: not-allowed;
-  color: #666;
+  color: #6b7280 !important;
+  border-style: dashed !important;
 }
 
-/* Badge "Auto" pour indiquer un champ automatique */
 .auto-badge {
   display: inline-block;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  font-size: 0.75rem;
-  margin-left: 0.5rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  margin-left: 0.4rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
-/* Hint sous le champ */
 .field-hint {
   display: block;
-  font-size: 0.8rem;
-  color: #888;
-  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
   font-style: italic;
 }
 
-
-/* GESTION DU STATUT */
+/* ===== STATUS & PROGRESS ===== */
 .status-management {
   display: grid;
   gap: 1.5rem;
@@ -1138,14 +1558,6 @@ const calculerBudget = (report: any) => {
   max-width: 300px;
 }
 
-.status-select-group select {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-}
-
-/* BARRE DE PROGRESSION */
 .progress-bar-section {
   display: grid;
   gap: 1rem;
@@ -1153,44 +1565,37 @@ const calculerBudget = (report: any) => {
 
 .progress-label {
   font-weight: 600;
-  color: #333;
+  color: #374151;
 }
 
 .progress-bar {
   width: 100%;
-  height: 30px;
-  background: #e0e0e0;
-  border-radius: 15px;
+  height: 28px;
+  background: #e5e7eb;
+  border-radius: 14px;
   overflow: hidden;
-  position: relative;
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  transition: width 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 10px;
-  color: white;
-  font-weight: 600;
-  font-size: 0.9rem;
+  transition: width 0.4s ease;
+  border-radius: 14px;
 }
 
 .progress-steps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .progress-step {
   text-align: center;
-  padding: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  background: #f9f9f9;
+  padding: 0.85rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafbfc;
   transition: all 0.3s;
 }
 
@@ -1202,22 +1607,23 @@ const calculerBudget = (report: any) => {
 .step-label {
   display: block;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
+  color: #374151;
+  margin-bottom: 0.3rem;
+  font-size: 0.88rem;
 }
 
 .step-value {
   display: block;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   color: #667eea;
   font-weight: 700;
 }
 
-/* DATES PAR ÉTAPE */
+/* ===== DATES ===== */
 .dates-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .date-field {
@@ -1225,44 +1631,31 @@ const calculerBudget = (report: any) => {
   flex-direction: column;
 }
 
-.date-field label {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.date-field input {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 0.95rem;
-}
-
 .processing-time {
   padding: 1rem;
-  background: #e7f3ff;
+  background: #eff6ff;
   border-left: 4px solid #667eea;
-  border-radius: 5px;
-  color: #333;
+  border-radius: 8px;
+  color: #1e40af;
   font-weight: 500;
 }
 
-/* BOUTONS D'ACTION */
+/* ===== ACTION BUTTONS ===== */
 .action-buttons {
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .btn-save,
 .btn-cancel {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 5px;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.25s;
 }
 
 .btn-save {
@@ -1272,129 +1665,114 @@ const calculerBudget = (report: any) => {
 
 .btn-save:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
 }
 
 .btn-cancel {
-  background: #e0e0e0;
-  color: #333;
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 2px solid #e5e7eb;
 }
 
 .btn-cancel:hover {
-  background: #d0d0d0;
+  background: #e5e7eb;
 }
 
-/* STATISTIQUES */
+/* ===== STATS GRID ===== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .stat {
   text-align: center;
-  padding: 1.5rem;
+  padding: 1.5rem 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border-radius: 10px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
 .stat-number {
   font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+  font-weight: 800;
+  margin-bottom: 0.3rem;
 }
 
 .stat-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   opacity: 0.9;
+  font-weight: 500;
 }
 
-/* TABLEAU STATISTIQUES */
+/* ===== PROCESSING STATS ===== */
 .processing-stats-table {
   margin-top: 2rem;
 }
 
-.stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.stats-table th,
-.stats-table td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.stats-table th {
-  background: #f5f5f5;
-  font-weight: 600;
-  color: #333;
-}
-
-.stats-table tr:hover {
-  background: #f9f9f9;
-}
-
 .stat-value {
-  font-weight: 600;
+  font-weight: 700;
   color: #667eea;
 }
 
-/* ÉTAT VIDE */
+/* ===== STATES ===== */
 .empty-state {
   text-align: center;
-  padding: 2rem;
-  color: #999;
-  font-size: 1.1rem;
+  padding: 2.5rem;
+  color: #9ca3af;
+  font-size: 1rem;
 }
 
-/* ÉTAT DE CHARGEMENT */
 .loading-state {
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem;
   color: #667eea;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.loading-state p::after {
-  content: '...';
-  animation: dots 1.5s steps(4, end) infinite;
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
-@keyframes dots {
-  0%, 20% { content: ''; }
-  40% { content: '.'; }
-  60% { content: '..'; }
-  80%, 100% { content: '...'; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-/* RESPONSIVE */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+
   .dashboard-header {
-    padding: 2rem;
+    padding: 1.5rem;
+    border-radius: 12px;
   }
 
   .dashboard-header h1 {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
   }
 
   .tabs-navigation {
     flex-direction: column;
   }
 
-  .tab-btn {
-    border-bottom: none;
-    border-left: 3px solid transparent;
-  }
-
   .tab-btn.active {
-    border-left-color: #667eea;
+    border-radius: 8px;
   }
 
+  .form-row,
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1409,8 +1787,7 @@ const calculerBudget = (report: any) => {
   }
 
   .report-status {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
   }
 
   .dates-grid {
@@ -1421,26 +1798,21 @@ const calculerBudget = (report: any) => {
     grid-template-columns: 1fr;
   }
 
-  .action-buttons {
+  .action-buttons,
+  .form-actions {
     flex-direction: column;
   }
 
   .btn-save,
-  .btn-cancel {
+  .btn-cancel,
+  .btn-primary,
+  .btn-secondary {
     width: 100%;
+    justify-content: center;
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stats-table {
-    font-size: 0.9rem;
-  }
-
-  .stats-table th,
-  .stats-table td {
-    padding: 0.75rem;
   }
 }
 </style>

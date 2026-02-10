@@ -1,0 +1,525 @@
+{
+  "info": {
+    "name": "ProjetFinalS5 - Laravel API",
+    "_postman_id": "projet-final-s5-api",
+    "description": "Collection complète des endpoints de l'API Laravel - Gestion des signalements routiers",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentification",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nouveau User\",\n  \"email\": \"nouveau@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"user\",\n  \"phone\": \"+261340000000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": ["{{base_url}}"],
+              "path": ["register"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logout",
+              "host": ["{{base_url}}"],
+              "path": ["logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gestion des comptes",
+      "item": [
+        {
+          "name": "Débloquer un compte",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"locked@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/unlock-account",
+              "host": ["{{base_url}}"],
+              "path": ["unlock-account"]
+            }
+          }
+        },
+        {
+          "name": "Statut d'un compte",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account-status/test@example.com",
+              "host": ["{{base_url}}"],
+              "path": ["account-status", "test@example.com"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gestion des utilisateurs",
+      "item": [
+        {
+          "name": "Liste tous les utilisateurs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Utilisateurs bloqués",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/locked",
+              "host": ["{{base_url}}"],
+              "path": ["users", "locked"]
+            }
+          }
+        },
+        {
+          "name": "Statistiques utilisateurs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/stats",
+              "host": ["{{base_url}}"],
+              "path": ["users", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Détail d'un utilisateur",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Modifier un utilisateur",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nom modifié\",\n  \"role\": \"manager\",\n  \"phone\": \"+261341111111\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer un utilisateur",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["users", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Problèmes Routiers",
+      "item": [
+        {
+          "name": "Liste tous les problèmes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/problemes",
+              "host": ["{{base_url}}"],
+              "path": ["problemes"]
+            }
+          }
+        },
+        {
+          "name": "Créer un problème",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"Nid de poule route nationale\",\n  \"description\": \"Grand trou sur la RN7\",\n  \"statut\": \"nouveau\",\n  \"latitude\": -18.8792,\n  \"longitude\": 47.5079,\n  \"type_probleme\": \"nid_de_poule\",\n  \"type_route\": \"route\",\n  \"surface_m2\": 15,\n  \"budget\": 0,\n  \"niveau\": 5,\n  \"date_signalement\": \"2026-02-10\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/problemes",
+              "host": ["{{base_url}}"],
+              "path": ["problemes"]
+            }
+          }
+        },
+        {
+          "name": "Détail d'un problème",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/problemes/1",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Modifier un problème",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"Nid de poule (mis à jour)\",\n  \"statut\": \"en_cours\",\n  \"entreprise\": \"Colas Madagascar\",\n  \"budget\": 50000,\n  \"niveau\": 7,\n  \"date_debut\": \"2026-02-15\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/problemes/1",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer un problème",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/problemes/1",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Vérifier existence par Firebase ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/problemes/check/firebase_id_example",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "check", "firebase_id_example"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Photos",
+      "item": [
+        {
+          "name": "Liste photos d'un problème",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/problemes/1/photos",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "1", "photos"]
+            }
+          }
+        },
+        {
+          "name": "Ajouter une photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/photo.jpg\",\n  \"description\": \"Photo du nid de poule\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/problemes/1/photos",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "1", "photos"]
+            }
+          }
+        },
+        {
+          "name": "Modifier une photo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Description mise à jour\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/problemes/photos/1",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "photos", "1"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer une photo",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/problemes/photos/1",
+              "host": ["{{base_url}}"],
+              "path": ["problemes", "photos", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prix par m²",
+      "item": [
+        {
+          "name": "Liste tous les prix actifs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/prix-par-m2",
+              "host": ["{{base_url}}"],
+              "path": ["prix-par-m2"]
+            }
+          }
+        },
+        {
+          "name": "Récupérer prix par type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type_probleme\": \"nid_de_poule\",\n  \"type_route\": \"route\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/prix-par-m2/get-prix",
+              "host": ["{{base_url}}"],
+              "path": ["prix-par-m2", "get-prix"]
+            }
+          }
+        },
+        {
+          "name": "Créer un nouveau prix",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type_probleme\": \"nid_de_poule\",\n  \"type_route\": \"route\",\n  \"prix\": 15000,\n  \"description\": \"Tarif nid de poule sur route\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/prix-par-m2",
+              "host": ["{{base_url}}"],
+              "path": ["prix-par-m2"]
+            }
+          }
+        },
+        {
+          "name": "Modifier un prix",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prix\": 18000,\n  \"description\": \"Tarif mis à jour\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/prix-par-m2/1",
+              "host": ["{{base_url}}"],
+              "path": ["prix-par-m2", "1"]
+            }
+          }
+        },
+        {
+          "name": "Désactiver un prix",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/prix-par-m2/1",
+              "host": ["{{base_url}}"],
+              "path": ["prix-par-m2", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Statistiques Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Debug",
+      "item": [
+        {
+          "name": "Debug - Liste problèmes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/debug/problemes",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "problemes"]
+            }
+          }
+        },
+        {
+          "name": "Debug - Test update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/debug/update-test/1",
+              "host": ["{{base_url}}"],
+              "path": ["debug", "update-test", "1"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
