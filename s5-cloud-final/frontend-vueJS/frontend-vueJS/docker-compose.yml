@@ -1,0 +1,29 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vuejs-frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - node
+
+  node:
+    image: node:20
+    container_name: vuejs_node
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./:/app
+    ports:
+      - "5173:5173"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
