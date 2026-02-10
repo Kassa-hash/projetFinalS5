@@ -40,8 +40,23 @@ class LoginRequest extends FormRequest
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
+        
+        // Check if user exists and is locked
+        $user = \App\Models\User::where('email', $this->email)->first();
+        
+        if ($user && $user->isLocked()) {
+            $minutes = now()->diffInMinutes($user->locked_until);
+            throw ValidationException::withMessages([
+                'email' => trans('auth.locked', ['minutes' => $minutes]),
+            ]);
+        }
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+            // Increment login attempts for the user
+            if ($user) {
+                $user->incrementLoginAttempts();
+            }
+            
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -49,6 +64,11 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Reset login attempts on successful login
+        if ($user) {
+            $user->resetLoginAttempts();
+        }
+        
         RateLimiter::clear($this->throttleKey());
     }
 
@@ -59,7 +79,9 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $maxAttempts = config('auth.max_login_attempts', 3);
+        
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), $maxAttempts)) {
             return;
         }
 
